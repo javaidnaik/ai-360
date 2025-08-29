@@ -10,6 +10,10 @@ export interface VideoCreation {
     timestamp: number;
     url: string; // Blob URL for easy display
     userId?: number; // Optional for backward compatibility
+    driveFileId?: string; // Google Drive file ID
+    driveViewLink?: string; // Google Drive view link
+    driveDownloadLink?: string; // Google Drive download link
+    isStoredInDrive?: boolean; // Whether the video is stored in Google Drive
 }
 
 export interface User {

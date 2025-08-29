@@ -4,6 +4,7 @@
 */
 
 import { GoogleGenAI } from "@google/genai";
+import * as db from './db';
 
 // Helper to convert a File to a base64 string
 const fileToBase64 = async (file: File): Promise<string> => {
@@ -29,17 +30,38 @@ export const generate360Video = async (
     prompt: string,
     onProgress: (message: string) => void,
 ): Promise<Blob> => {
-    if (!process.env.API_KEY) {
-        throw new Error("API_KEY environment variable not set.");
+    // Get active AI model configuration from database
+    let apiKey = process.env.API_KEY;
+    let modelId = 'veo-2.0-generate-001';
+    
+    try {
+        const models = await db.getAllAIModels();
+        const activeModel = models.find(model => model.isActive);
+        
+        if (activeModel) {
+            apiKey = activeModel.apiKey;
+            modelId = activeModel.modelId;
+            onProgress(`Using AI model: ${activeModel.name}`);
+        } else {
+            onProgress('Using default AI model configuration');
+        }
+    } catch (error) {
+        console.warn('Could not load AI models from database, using defaults:', error);
+        onProgress('Using default AI model configuration');
     }
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+    if (!apiKey) {
+        throw new Error("No API key available. Please configure an AI model in Super Admin or set API_KEY environment variable.");
+    }
+    
+    const ai = new GoogleGenAI({ apiKey });
     
     onProgress('Preparing images for the AI...');
     const imageBytes = await fileToBase64(combinedImage);
 
     onProgress('Sending request to the video model...');
     let operation = await ai.models.generateVideos({
-        model: 'veo-2.0-generate-001',
+        model: modelId,
         prompt: prompt,
         image: {
             imageBytes: imageBytes,
@@ -76,7 +98,7 @@ export const generate360Video = async (
     }
 
     onProgress('Generation complete! Downloading video...');
-    const response = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
+    const response = await fetch(`${downloadLink}&key=${apiKey}`);
     if (!response.ok) {
         throw new Error(`Failed to download the generated video. Status: ${response.status}`);
     }

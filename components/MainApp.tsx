@@ -10,8 +10,10 @@ import { useAuth } from '../contexts/AuthContext';
 import Header from './Header';
 import Spinner from './Spinner';
 import StartScreen from './StartScreen';
-import { AddIcon, TrashIcon, VideoIcon } from './icons';
+import GoogleDriveAuth from './GoogleDriveAuth';
+import { AddIcon, TrashIcon, VideoIcon, DownloadIcon } from './icons';
 import { VideoCreation } from '../types';
+import { googleDriveService } from '../services/googleDriveService';
 
 type View = 'start' | 'editor' | 'loading' | 'result' | 'gallery' | 'error';
 const MAX_IMAGES = 1;
@@ -63,6 +65,8 @@ const MainApp: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [galleryVideos, setGalleryVideos] = useState<VideoCreation[]>([]);
+  const [isDriveAuthenticated, setIsDriveAuthenticated] = useState(false);
+  const [driveAuthError, setDriveAuthError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   useEffect(() => {
@@ -88,6 +92,21 @@ const MainApp: React.FC = () => {
       setView('start');
     }
   }, [user, view]);
+
+  // Check Google Drive authentication status on load
+  useEffect(() => {
+    setIsDriveAuthenticated(googleDriveService.isUserAuthenticated());
+  }, []);
+
+  const handleDriveAuthSuccess = () => {
+    setIsDriveAuthenticated(true);
+    setDriveAuthError(null);
+  };
+
+  const handleDriveAuthError = (error: string) => {
+    setDriveAuthError(error);
+    setIsDriveAuthenticated(false);
+  };
 
   const handleFilesSelect = useCallback((files: FileList) => {
     // Only take the first file since we only allow one image
@@ -133,11 +152,39 @@ const MainApp: React.FC = () => {
       const processedImageFile = await processImageForGeneration(images);
       const generatedBlob = await generate360Video(processedImageFile, finalPrompt, setLoadingMessage);
       
+      let driveFileId: string | undefined;
+      let driveViewLink: string | undefined;
+      let driveDownloadLink: string | undefined;
+      let isStoredInDrive = false;
+
+      // Try to upload to Google Drive if authenticated
+      if (isDriveAuthenticated && user) {
+        try {
+          setLoadingMessage('Saving to Google Drive...');
+          const fileName = `pixshop_video_${Date.now()}.mp4`;
+          const driveFile = await googleDriveService.uploadVideo(generatedBlob, fileName, user.id);
+          
+          driveFileId = driveFile.id;
+          driveViewLink = driveFile.webViewLink;
+          driveDownloadLink = driveFile.webContentLink;
+          isStoredInDrive = true;
+          setLoadingMessage('Video saved to Google Drive successfully!');
+        } catch (driveError) {
+          console.error('Failed to upload to Google Drive:', driveError);
+          setLoadingMessage('Video generated successfully (Drive upload failed)');
+          // Continue without Drive storage
+        }
+      }
+      
       const newCreation: Omit<VideoCreation, 'id' | 'url'> = {
         prompt: finalPrompt,
         videoBlob: generatedBlob,
         timestamp: Date.now(),
-        userId: user?.id // Associate with current user
+        userId: user?.id, // Associate with current user
+        driveFileId,
+        driveViewLink,
+        driveDownloadLink,
+        isStoredInDrive
       };
       
       const savedId = await db.addVideo(newCreation);
@@ -195,6 +242,19 @@ const MainApp: React.FC = () => {
         return (
           <div className="w-full max-w-4xl mx-auto flex flex-col items-center gap-8 animate-fade-in p-4">
             <Header onShowGallery={() => setView('gallery')} hasCreations={galleryVideos.length > 0}/>
+            
+            {/* Google Drive Authentication */}
+            <GoogleDriveAuth 
+              onAuthSuccess={handleDriveAuthSuccess}
+              onAuthError={handleDriveAuthError}
+            />
+            
+            {driveAuthError && (
+              <div className="w-full bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+                <p className="text-red-400 text-sm">{driveAuthError}</p>
+              </div>
+            )}
+            
             <div className="w-full bg-black/20 border border-gray-700/50 rounded-lg p-6 backdrop-blur-sm">
                 <h2 className="text-2xl font-bold text-gray-100 mb-1">Your Image</h2>
                 <p className="text-gray-400 mb-4">Upload one image to create your 360° video.</p>
@@ -319,9 +379,49 @@ const MainApp: React.FC = () => {
                     <div className="p-4">
                       <p className="text-gray-400 text-sm truncate" title={video.prompt}>{video.prompt}</p>
                       <p className="text-gray-500 text-xs mt-1">{new Date(video.timestamp).toLocaleString()}</p>
-                      <div className="flex items-center justify-between mt-4">
-                        <a href={video.url} download={`video-${video.id}.mp4`} className="text-sm font-semibold text-green-400 hover:text-green-300">Download</a>
-                        <button onClick={() => handleDeleteVideo(video.id)} className="text-sm font-semibold text-red-400 hover:text-red-300">Delete</button>
+                      
+                      {/* Drive Status */}
+                      {video.isStoredInDrive && (
+                        <div className="flex items-center gap-2 mt-2">
+                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          <span className="text-xs text-green-400">Saved to Google Drive</span>
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center justify-between mt-4 gap-2">
+                        <div className="flex gap-2">
+                          {/* Local Download */}
+                          <a 
+                            href={video.url} 
+                            download={`pixshop_video_${video.id}.mp4`} 
+                            className="flex items-center gap-1 text-sm font-semibold text-green-400 hover:text-green-300 transition"
+                          >
+                            <DownloadIcon className="w-4 h-4" />
+                            Local
+                          </a>
+                          
+                          {/* Google Drive Download */}
+                          {video.isStoredInDrive && video.driveViewLink && (
+                            <a 
+                              href={video.driveViewLink} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-1 text-sm font-semibold text-blue-400 hover:text-blue-300 transition"
+                            >
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"/>
+                              </svg>
+                              Drive
+                            </a>
+                          )}
+                        </div>
+                        
+                        <button 
+                          onClick={() => handleDeleteVideo(video.id)} 
+                          className="text-sm font-semibold text-red-400 hover:text-red-300 transition"
+                        >
+                          Delete
+                        </button>
                       </div>
                     </div>
                   </div>
