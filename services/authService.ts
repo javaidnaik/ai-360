@@ -3,13 +3,48 @@
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import CryptoJS from 'crypto-js';
 import { User, LoginCredentials, SignupCredentials, AuthState } from '../types';
 import * as db from './db';
 
 const JWT_SECRET = 'pixshop-jwt-secret-key-2024'; // In production, use environment variable
-const TOKEN_EXPIRY = '7d';
+const TOKEN_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+
+// Simple JWT-like token creation and verification using browser-compatible crypto
+const createToken = (payload: any): string => {
+  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const body = btoa(JSON.stringify({ ...payload, exp: Date.now() + TOKEN_EXPIRY }));
+  const signature = CryptoJS.HmacSHA256(`${header}.${body}`, JWT_SECRET).toString();
+  return `${header}.${body}.${signature}`;
+};
+
+const verifyToken = (token: string): any => {
+  try {
+    const [header, body, signature] = token.split('.');
+    const expectedSignature = CryptoJS.HmacSHA256(`${header}.${body}`, JWT_SECRET).toString();
+    
+    if (signature !== expectedSignature) {
+      throw new Error('Invalid signature');
+    }
+    
+    const payload = JSON.parse(atob(body));
+    if (payload.exp < Date.now()) {
+      throw new Error('Token expired');
+    }
+    
+    return payload;
+  } catch (error) {
+    throw new Error('Invalid token');
+  }
+};
+
+const hashPassword = (password: string): string => {
+  return CryptoJS.SHA256(password + JWT_SECRET).toString();
+};
+
+const comparePassword = (password: string, hash: string): boolean => {
+  return hashPassword(password) === hash;
+};
 
 export class AuthService {
   private static instance: AuthService;
@@ -34,7 +69,7 @@ export class AuthService {
     const token = localStorage.getItem('auth_token');
     if (token) {
       try {
-        const decoded = jwt.verify(token, JWT_SECRET) as any;
+        const decoded = verifyToken(token);
         const user = await db.getUserById(decoded.userId);
         if (user) {
           this.authState = {
@@ -60,7 +95,7 @@ export class AuthService {
       }
 
       // Hash password
-      const passwordHash = await bcrypt.hash(credentials.password, 12);
+      const passwordHash = hashPassword(credentials.password);
 
       // Create user
       const newUser: Omit<User, 'id'> = {
@@ -80,7 +115,7 @@ export class AuthService {
       }
 
       // Generate token
-      const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: TOKEN_EXPIRY });
+      const token = createToken({ userId: user.id });
 
       // Update auth state
       this.authState = {
@@ -106,7 +141,7 @@ export class AuthService {
         return { success: false, message: 'Invalid email or password' };
       }
 
-      const isPasswordValid = await bcrypt.compare(credentials.password, user.passwordHash);
+      const isPasswordValid = comparePassword(credentials.password, user.passwordHash);
       if (!isPasswordValid) {
         return { success: false, message: 'Invalid email or password' };
       }
@@ -115,7 +150,7 @@ export class AuthService {
       await db.updateUserLastLogin(user.id);
 
       // Generate token
-      const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: TOKEN_EXPIRY });
+      const token = createToken({ userId: user.id });
 
       // Update auth state
       this.authState = {
@@ -163,7 +198,7 @@ export class AuthService {
     try {
       const existingAdmin = await db.getUserByEmail('admin@pixshop.com');
       if (!existingAdmin) {
-        const passwordHash = await bcrypt.hash('admin123!', 12);
+        const passwordHash = hashPassword('admin123!');
         const adminUser: Omit<User, 'id'> = {
           email: 'admin@pixshop.com',
           passwordHash,
