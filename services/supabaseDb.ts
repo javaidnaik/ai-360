@@ -6,9 +6,12 @@ import { supabase } from './supabase'
 import { VideoCreation, User, AIModelConfig, UserAnalytics } from '../types'
 import CryptoJS from 'crypto-js'
 
+// Use the same JWT_SECRET as authService for consistent password hashing
+const JWT_SECRET = 'your-secret-key-here-make-it-long-and-random-for-production'
+
 // User Management
 export async function createUser(email: string, password: string, role: 'user' | 'super_admin' = 'user', firstName?: string, lastName?: string): Promise<User> {
-  const passwordHash = CryptoJS.SHA256(password).toString()
+  const passwordHash = CryptoJS.SHA256(password + JWT_SECRET).toString()
   
   const { data, error } = await supabase
     .from('users')

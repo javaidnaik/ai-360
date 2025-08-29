@@ -59,14 +59,14 @@ END $$;
 -- Update super admin with correct password and add names if missing
 UPDATE users 
 SET 
-    password_hash = 'ef2d127de37b942baad06145e54b0c619a1f22327b2ebbcfbec78f5564afe39d',
+    password_hash = 'b80921595f7fd56db0acd8581d5abafeca181b5beadbe1f6be83477076d22ccd',
     first_name = COALESCE(first_name, 'Super'),
     last_name = COALESCE(last_name, 'Admin')
 WHERE email = 'admin@pixshop.com';
 
 -- Insert super admin if it doesn't exist
 INSERT INTO users (email, password_hash, role, created_at, first_name, last_name) 
-VALUES ('admin@pixshop.com', 'ef2d127de37b942baad06145e54b0c619a1f22327b2ebbcfbec78f5564afe39d', 'super_admin', NOW(), 'Super', 'Admin')
+VALUES ('admin@pixshop.com', 'b80921595f7fd56db0acd8581d5abafeca181b5beadbe1f6be83477076d22ccd', 'super_admin', NOW(), 'Super', 'Admin')
 ON CONFLICT (email) DO NOTHING;
 
 -- Verify setup
