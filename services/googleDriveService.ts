@@ -3,8 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { GoogleAuth } from 'google-auth-library';
-import { drive_v3, google } from 'googleapis';
+// No longer need googleapis - using browser-compatible Google APIs
 
 export interface DriveFile {
   id: string;
@@ -17,8 +16,6 @@ export interface DriveFile {
 
 export class GoogleDriveService {
   private static instance: GoogleDriveService;
-  private drive: drive_v3.Drive | null = null;
-  private auth: GoogleAuth | null = null;
   private isAuthenticated = false;
 
   private constructor() {}
@@ -31,11 +28,11 @@ export class GoogleDriveService {
   }
 
   /**
-   * Initialize Google Drive API with user authentication
+   * Initialize Google Drive API with user authentication using Google Identity Services
    */
   async authenticate(): Promise<boolean> {
     try {
-      // For browser-based authentication, we'll use Google's OAuth2 flow
+      // For browser-based authentication, we'll use Google's newer Identity Services
       const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
       const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
       
@@ -46,12 +43,13 @@ export class GoogleDriveService {
         throw new Error('Google Drive API credentials not configured. Please set VITE_GOOGLE_CLIENT_ID and VITE_GOOGLE_API_KEY environment variables.');
       }
       
-      // Load Google API
+      // Load Google APIs and Identity Services
       await this.loadGoogleAPI();
+      await this.loadGoogleIdentityServices();
       
-      // Initialize the API
+      // Initialize the Google API client
       await new Promise<void>((resolve, reject) => {
-        gapi.load('auth2:client', {
+        gapi.load('client', {
           callback: resolve,
           onerror: reject
         });
@@ -59,19 +57,29 @@ export class GoogleDriveService {
 
       await gapi.client.init({
         apiKey: API_KEY,
-        clientId: CLIENT_ID,
-        discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
-        scope: 'https://www.googleapis.com/auth/drive.file'
+        discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest']
       });
 
-      const authInstance = gapi.auth2.getAuthInstance();
-      
-      if (!authInstance.isSignedIn.get()) {
-        await authInstance.signIn();
-      }
+      // Use Google Identity Services for authentication
+      const tokenResponse = await new Promise<any>((resolve, reject) => {
+        const tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: CLIENT_ID,
+          scope: 'https://www.googleapis.com/auth/drive.file',
+          callback: (response: any) => {
+            if (response.error) {
+              reject(response);
+            } else {
+              resolve(response);
+            }
+          }
+        });
+        tokenClient.requestAccessToken();
+      });
 
-      this.isAuthenticated = authInstance.isSignedIn.get();
-      return this.isAuthenticated;
+      // Set the access token for API calls
+      gapi.client.setToken(tokenResponse);
+      this.isAuthenticated = true;
+      return true;
     } catch (error) {
       console.error('Google Drive authentication failed:', error);
       return false;
@@ -97,11 +105,29 @@ export class GoogleDriveService {
   }
 
   /**
+   * Load Google Identity Services script dynamically
+   */
+  private loadGoogleIdentityServices(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (typeof google !== 'undefined' && google.accounts) {
+        resolve();
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('Failed to load Google Identity Services'));
+      document.head.appendChild(script);
+    });
+  }
+
+  /**
    * Check if user is authenticated with Google Drive
    */
   isUserAuthenticated(): boolean {
     return this.isAuthenticated && typeof gapi !== 'undefined' && 
-           gapi.auth2 && gapi.auth2.getAuthInstance().isSignedIn.get();
+           gapi.client && gapi.client.getToken() !== null;
   }
 
   /**
@@ -264,9 +290,8 @@ export class GoogleDriveService {
    * Sign out from Google Drive
    */
   async signOut(): Promise<void> {
-    if (typeof gapi !== 'undefined' && gapi.auth2) {
-      const authInstance = gapi.auth2.getAuthInstance();
-      await authInstance.signOut();
+    if (typeof gapi !== 'undefined' && gapi.client) {
+      gapi.client.setToken(null);
       this.isAuthenticated = false;
     }
   }
@@ -288,9 +313,10 @@ export class GoogleDriveService {
   }
 }
 
-// Global declaration for Google API
+// Global declarations for Google APIs
 declare global {
   const gapi: any;
+  const google: any;
 }
 
 export const googleDriveService = GoogleDriveService.getInstance();
