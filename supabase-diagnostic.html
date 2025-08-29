@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase Configuration Diagnostic</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .error { color: red; background: #fee; padding: 10px; border-radius: 5px; margin: 10px 0; }
+        .success { color: green; background: #efe; padding: 10px; border-radius: 5px; margin: 10px 0; }
+        .warning { color: orange; background: #fff4e6; padding: 10px; border-radius: 5px; margin: 10px 0; }
+        input, button { padding: 10px; margin: 5px; border: 1px solid #ccc; border-radius: 4px; }
+        input { width: 400px; }
+        button { background: #007cba; color: white; cursor: pointer; }
+        button:hover { background: #005a87; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Supabase Configuration Diagnostic Tool</h1>
+    <p>This tool helps you verify your Supabase configuration is correct.</p>
+
+    <div>
+        <h3>Step 1: Enter Your Supabase URL</h3>
+        <input type="text" id="supabaseUrl" placeholder="https://your-project-id.supabase.co" />
+        <button onclick="checkUrl()">Check URL</button>
+        <div id="urlResult"></div>
+    </div>
+
+    <div>
+        <h3>Step 2: Enter Your Anon Key</h3>
+        <input type="text" id="anonKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." />
+        <button onclick="checkKey()">Check Key</button>
+        <div id="keyResult"></div>
+    </div>
+
+    <div>
+        <h3>Step 3: Test Connection</h3>
+        <button onclick="testConnection()">Test Supabase Connection</button>
+        <div id="connectionResult"></div>
+    </div>
+
+    <div>
+        <h3>Environment Variables</h3>
+        <p>Add these to your <code>.env.local</code> file:</p>
+        <div id="envVars"></div>
+    </div>
+
+    <script>
+        function checkUrl() {
+            const url = document.getElementById('supabaseUrl').value;
+            const result = document.getElementById('urlResult');
+            
+            if (!url) {
+                result.innerHTML = '<div class="error">❌ Please enter a URL</div>';
+                return;
+            }
+            
+            if (url.startsWith('postgres://')) {
+                result.innerHTML = '<div class="error">❌ Wrong URL! You\'re using the PostgreSQL connection string.<br/>Go to Supabase Dashboard → Settings → API → Project URL<br/>It should look like: https://xyz.supabase.co</div>';
+                return;
+            }
+            
+            if (!url.startsWith('https://')) {
+                result.innerHTML = '<div class="error">❌ URL must start with https://</div>';
+                return;
+            }
+            
+            if (!url.includes('.supabase.co')) {
+                result.innerHTML = '<div class="warning">⚠️ URL should end with .supabase.co</div>';
+                return;
+            }
+            
+            result.innerHTML = '<div class="success">✅ URL format looks correct!</div>';
+            updateEnvVars();
+        }
+        
+        function checkKey() {
+            const key = document.getElementById('anonKey').value;
+            const result = document.getElementById('keyResult');
+            
+            if (!key) {
+                result.innerHTML = '<div class="error">❌ Please enter an anon key</div>';
+                return;
+            }
+            
+            if (!key.startsWith('eyJ')) {
+                result.innerHTML = '<div class="error">❌ Anon key should start with "eyJ"</div>';
+                return;
+            }
+            
+            try {
+                // Basic JWT structure check
+                const parts = key.split('.');
+                if (parts.length !== 3) {
+                    result.innerHTML = '<div class="error">❌ Invalid JWT format</div>';
+                    return;
+                }
+                
+                result.innerHTML = '<div class="success">✅ Anon key format looks correct!</div>';
+                updateEnvVars();
+            } catch (e) {
+                result.innerHTML = '<div class="error">❌ Invalid key format</div>';
+            }
+        }
+        
+        async function testConnection() {
+            const url = document.getElementById('supabaseUrl').value;
+            const key = document.getElementById('anonKey').value;
+            const result = document.getElementById('connectionResult');
+            
+            if (!url || !key) {
+                result.innerHTML = '<div class="error">❌ Please enter both URL and key first</div>';
+                return;
+            }
+            
+            result.innerHTML = '<div>🔄 Testing connection...</div>';
+            
+            try {
+                const response = await fetch(`${url}/rest/v1/`, {
+                    headers: {
+                        'apikey': key,
+                        'Authorization': `Bearer ${key}`
+                    }
+                });
+                
+                if (response.ok) {
+                    result.innerHTML = '<div class="success">✅ Connection successful! Your Supabase configuration is working.</div>';
+                } else {
+                    result.innerHTML = `<div class="error">❌ Connection failed: ${response.status} ${response.statusText}</div>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Connection error: ${error.message}</div>`;
+            }
+        }
+        
+        function updateEnvVars() {
+            const url = document.getElementById('supabaseUrl').value;
+            const key = document.getElementById('anonKey').value;
+            const envVars = document.getElementById('envVars');
+            
+            if (url && key) {
+                envVars.innerHTML = `
+                    <pre style="background: #f5f5f5; padding: 15px; border-radius: 5px;">
+VITE_SUPABASE_URL=${url}
+VITE_SUPABASE_ANON_KEY=${key}
+                    </pre>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

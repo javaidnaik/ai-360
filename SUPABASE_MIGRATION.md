@@ -27,8 +27,10 @@ This guide will help you migrate from IndexedDB to Supabase for a more reliable,
 
 1. In your Supabase dashboard, go to **Settings** > **API**
 2. Copy the following values:
-   - **Project URL** (e.g., `https://xxxxx.supabase.co`)
+   - **Project URL** (e.g., `https://xxxxx.supabase.co`) - **NOT** the PostgreSQL URL!
    - **anon public key** (starts with `eyJ...`)
+
+⚠️ **IMPORTANT**: Use the "Project URL" that looks like `https://xxxxx.supabase.co`, NOT the PostgreSQL connection string that starts with `postgres://`. The PostgreSQL URL is for server-side connections only.
 
 ## Step 3: Set Up Database Schema
 
@@ -45,9 +47,11 @@ This guide will help you migrate from IndexedDB to Supabase for a more reliable,
 
 ```env
 # Supabase Configuration
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your_anon_key_here
+VITE_SUPABASE_URL=https://your-project-id.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
+
+⚠️ **Common Mistake**: Don't use the PostgreSQL URL (`postgres://...`). Use the Project URL that starts with `https://`.
 
 ## Step 5: Update Super Admin Password
 
@@ -82,9 +86,21 @@ WHERE email = 'admin@pixshop.com';
 
 ## Troubleshooting
 
+### "Request cannot be constructed from a URL that includes credentials"
+**This is the most common error!** You're using the wrong URL.
+
+❌ **Wrong**: `postgres://postgres.xyz:password@aws-1-us-east-1.pooler.supabase.com:6543/postgres`  
+✅ **Correct**: `https://xyz.supabase.co`
+
+**Fix**: 
+1. Go to Supabase Dashboard → Settings → API
+2. Copy the **Project URL** (not Connection string)
+3. It should look like: `https://your-project-id.supabase.co`
+
 ### "Failed to connect to Supabase"
-- Verify your `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
-- Make sure the environment variables are set correctly
+- Verify your `VITE_SUPABASE_URL` starts with `https://` 
+- Verify your `VITE_SUPABASE_ANON_KEY` starts with `eyJ`
+- Make sure the environment variables are set correctly in `.env.local`
 
 ### "Row Level Security policy violation"
 - The RLS policies are set up to allow proper access
