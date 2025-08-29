@@ -7,7 +7,7 @@ import { VideoCreation, User, AIModelConfig, UserAnalytics } from '../types'
 import CryptoJS from 'crypto-js'
 
 // User Management
-export async function createUser(email: string, password: string, role: 'user' | 'super_admin' = 'user'): Promise<User> {
+export async function createUser(email: string, password: string, role: 'user' | 'super_admin' = 'user', firstName?: string, lastName?: string): Promise<User> {
   const passwordHash = CryptoJS.SHA256(password).toString()
   
   const { data, error } = await supabase
@@ -15,6 +15,8 @@ export async function createUser(email: string, password: string, role: 'user' |
     .insert({
       email,
       password_hash: passwordHash,
+      first_name: firstName,
+      last_name: lastName,
       role,
       created_at: new Date().toISOString()
     })
@@ -28,9 +30,12 @@ export async function createUser(email: string, password: string, role: 'user' |
   return {
     id: data.id,
     email: data.email,
+    passwordHash: data.password_hash,
+    firstName: data.first_name || '',
+    lastName: data.last_name || '',
     role: data.role,
-    createdAt: data.created_at,
-    lastLogin: data.last_login
+    createdAt: new Date(data.created_at).getTime(),
+    lastLogin: data.last_login ? new Date(data.last_login).getTime() : undefined
   }
 }
 
@@ -49,9 +54,12 @@ export async function getUserByEmail(email: string): Promise<User | null> {
   return {
     id: data.id,
     email: data.email,
+    passwordHash: data.password_hash,
+    firstName: data.first_name || '',
+    lastName: data.last_name || '',
     role: data.role,
-    createdAt: data.created_at,
-    lastLogin: data.last_login
+    createdAt: new Date(data.created_at).getTime(),
+    lastLogin: data.last_login ? new Date(data.last_login).getTime() : undefined
   }
 }
 

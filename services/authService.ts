@@ -94,25 +94,8 @@ export class AuthService {
         return { success: false, message: 'User with this email already exists' };
       }
 
-      // Hash password
-      const passwordHash = hashPassword(credentials.password);
-
-      // Create user
-      const newUser: Omit<User, 'id'> = {
-        email: credentials.email,
-        passwordHash,
-        firstName: credentials.firstName,
-        lastName: credentials.lastName,
-        role: 'user',
-        createdAt: Date.now()
-      };
-
-      const userId = await db.addUser(newUser);
-      const user = await db.getUserById(userId);
-      
-      if (!user) {
-        return { success: false, message: 'Failed to create user' };
-      }
+      // Create new user using Supabase
+      const user = await db.createUser(credentials.email, credentials.password, 'user', credentials.firstName, credentials.lastName);
 
       // Generate token
       const token = createToken({ userId: user.id });

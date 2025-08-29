@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Environment Variables Check</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .error { color: red; background: #fee; padding: 10px; border-radius: 5px; margin: 10px 0; }
+        .success { color: green; background: #efe; padding: 10px; border-radius: 5px; margin: 10px 0; }
+        .warning { color: orange; background: #fff4e6; padding: 10px; border-radius: 5px; margin: 10px 0; }
+        pre { background: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Environment Variables Debug</h1>
+    <p>This page will help you debug your environment variable configuration.</p>
+
+    <h3>1. Check Browser Console</h3>
+    <p>Open your browser's developer tools (F12) and check the Console tab for debug messages.</p>
+
+    <h3>2. Common Issues & Solutions</h3>
+
+    <div class="warning">
+        <strong>Issue: Environment variables not loading</strong>
+        <ul>
+            <li>Make sure your <code>.env.local</code> file is in the root directory (same level as package.json)</li>
+            <li>Restart your dev server after creating/updating .env.local</li>
+            <li>Environment variables must start with <code>VITE_</code> to be available in the browser</li>
+        </ul>
+    </div>
+
+    <div class="error">
+        <strong>Issue: "Failed to construct 'URL': Invalid URL"</strong>
+        <ul>
+            <li>The VITE_SUPABASE_URL is empty or invalid</li>
+            <li>Check that your .env.local file has the correct format</li>
+            <li>Make sure there are no quotes around the values</li>
+        </ul>
+    </div>
+
+    <h3>3. Your .env.local File Should Look Like This:</h3>
+    <pre>
+# Gemini AI API Key
+GEMINI_API_KEY=your_gemini_api_key_here
+
+# Supabase Configuration  
+VITE_SUPABASE_URL=https://zvzhwefewfengwigzooffovk.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp2emhyeWhuZ3dpZ3pvb2Zmb3ZrIiwiahhwffmFub24iLCJpYXQiOjE3NTY0ODgxODcsImV4cCI6MjA3MjA2NDE4N30.TeqxpRP_qsZ3FbsOb3wyCasgapfx2jgROLXzjD14Al8
+
+# Google Drive API Configuration
+VITE_GOOGLE_CLIENT_ID=your_google_oauth_client_id_here
+VITE_GOOGLE_API_KEY=your_google_api_key_here
+    </pre>
+
+    <h3>4. File Location Check</h3>
+    <div class="warning">
+        <p><strong>Make sure your .env.local file is in the correct location:</strong></p>
+        <pre>
+pixshop/
+├── .env.local          ← Should be here (same level as package.json)
+├── package.json
+├── src/
+├── components/
+└── ...
+        </pre>
+    </div>
+
+    <h3>5. Restart Required</h3>
+    <div class="error">
+        <p><strong>After creating or updating .env.local:</strong></p>
+        <ol>
+            <li>Stop your dev server (Ctrl+C)</li>
+            <li>Run <code>npm run dev</code> again</li>
+            <li>Check the browser console for debug messages</li>
+        </ol>
+    </div>
+
+    <script>
+        console.log('=== Environment Variables Debug ===');
+        console.log('This should help you identify the issue');
+        console.log('Check the main app console for Supabase debug messages');
+    </script>
+</body>
+</html>

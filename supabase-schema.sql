@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   email VARCHAR(255) UNIQUE NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
+  first_name VARCHAR(255),
+  last_name VARCHAR(255),
   role VARCHAR(20) DEFAULT 'user' CHECK (role IN ('user', 'super_admin')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   last_login TIMESTAMP WITH TIME ZONE
@@ -46,65 +48,20 @@ CREATE INDEX IF NOT EXISTS idx_videos_timestamp ON videos(timestamp);
 CREATE INDEX IF NOT EXISTS idx_ai_models_active ON ai_models(is_active);
 
 -- Row Level Security Policies
+-- Note: Since we're using custom authentication (not Supabase Auth), 
+-- we'll disable RLS for now and rely on application-level security
 
--- Users table policies
+-- Users table - Allow all operations for custom auth
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all operations on users" ON users FOR ALL USING (true);
 
--- Users can read their own data
-CREATE POLICY "Users can view own profile" ON users
-  FOR SELECT USING (auth.uid()::text = id::text OR 
-                   EXISTS (SELECT 1 FROM users WHERE id = auth.uid()::integer AND role = 'super_admin'));
-
--- Super admins can view all users
-CREATE POLICY "Super admins can view all users" ON users
-  FOR SELECT USING (EXISTS (SELECT 1 FROM users WHERE id = auth.uid()::integer AND role = 'super_admin'));
-
--- Allow user registration
-CREATE POLICY "Allow user registration" ON users
-  FOR INSERT WITH CHECK (true);
-
--- Users can update their own data
-CREATE POLICY "Users can update own profile" ON users
-  FOR UPDATE USING (auth.uid()::text = id::text OR 
-                   EXISTS (SELECT 1 FROM users WHERE id = auth.uid()::integer AND role = 'super_admin'));
-
--- Super admins can delete users
-CREATE POLICY "Super admins can delete users" ON users
-  FOR DELETE USING (EXISTS (SELECT 1 FROM users WHERE id = auth.uid()::integer AND role = 'super_admin'));
-
--- Videos table policies
+-- Videos table - Allow all operations for custom auth  
 ALTER TABLE videos ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all operations on videos" ON videos FOR ALL USING (true);
 
--- Users can view their own videos
-CREATE POLICY "Users can view own videos" ON videos
-  FOR SELECT USING (user_id = auth.uid()::integer OR 
-                   EXISTS (SELECT 1 FROM users WHERE id = auth.uid()::integer AND role = 'super_admin'));
-
--- Users can insert their own videos
-CREATE POLICY "Users can create own videos" ON videos
-  FOR INSERT WITH CHECK (user_id = auth.uid()::integer OR 
-                        EXISTS (SELECT 1 FROM users WHERE id = auth.uid()::integer AND role = 'super_admin'));
-
--- Users can update their own videos
-CREATE POLICY "Users can update own videos" ON videos
-  FOR UPDATE USING (user_id = auth.uid()::integer OR 
-                   EXISTS (SELECT 1 FROM users WHERE id = auth.uid()::integer AND role = 'super_admin'));
-
--- Users can delete their own videos
-CREATE POLICY "Users can delete own videos" ON videos
-  FOR DELETE USING (user_id = auth.uid()::integer OR 
-                   EXISTS (SELECT 1 FROM users WHERE id = auth.uid()::integer AND role = 'super_admin'));
-
--- AI Models table policies
+-- AI Models table - Allow all operations for custom auth
 ALTER TABLE ai_models ENABLE ROW LEVEL SECURITY;
-
--- Only super admins can manage AI models
-CREATE POLICY "Super admins can manage AI models" ON ai_models
-  FOR ALL USING (EXISTS (SELECT 1 FROM users WHERE id = auth.uid()::integer AND role = 'super_admin'));
-
--- Everyone can read active AI models
-CREATE POLICY "Everyone can read active AI models" ON ai_models
-  FOR SELECT USING (is_active = true);
+CREATE POLICY "Allow all operations on ai_models" ON ai_models FOR ALL USING (true);
 
 -- Insert default super admin
 INSERT INTO users (email, password_hash, role, created_at) 
