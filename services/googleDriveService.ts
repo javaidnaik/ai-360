@@ -17,14 +17,76 @@ export interface DriveFile {
 export class GoogleDriveService {
   private static instance: GoogleDriveService;
   private isAuthenticated = false;
+  private readonly TOKEN_STORAGE_KEY = 'pixshop_google_drive_token';
 
   private constructor() {}
 
   static getInstance(): GoogleDriveService {
     if (!GoogleDriveService.instance) {
       GoogleDriveService.instance = new GoogleDriveService();
+      GoogleDriveService.instance.initializeFromStorage();
     }
     return GoogleDriveService.instance;
+  }
+
+  /**
+   * Initialize authentication state from localStorage
+   */
+  private initializeFromStorage(): void {
+    try {
+      const storedToken = localStorage.getItem(this.TOKEN_STORAGE_KEY);
+      if (storedToken) {
+        const tokenData = JSON.parse(storedToken);
+        // Check if token is still valid (not expired)
+        if (tokenData.expires_at && tokenData.expires_at > Date.now()) {
+          this.isAuthenticated = true;
+          console.log('🔄 Restored Google Drive authentication from storage');
+        } else {
+          // Token expired, remove it
+          localStorage.removeItem(this.TOKEN_STORAGE_KEY);
+          console.log('🕒 Stored Google Drive token expired, removed');
+        }
+      }
+    } catch (error) {
+      console.error('Error loading stored token:', error);
+      localStorage.removeItem(this.TOKEN_STORAGE_KEY);
+    }
+  }
+
+  /**
+   * Save authentication token to localStorage
+   */
+  private saveTokenToStorage(tokenResponse: any): void {
+    try {
+      const tokenData = {
+        access_token: tokenResponse.access_token,
+        expires_at: Date.now() + (tokenResponse.expires_in * 1000), // Convert to timestamp
+        scope: tokenResponse.scope,
+        token_type: tokenResponse.token_type
+      };
+      localStorage.setItem(this.TOKEN_STORAGE_KEY, JSON.stringify(tokenData));
+      console.log('💾 Google Drive token saved to storage');
+    } catch (error) {
+      console.error('Error saving token to storage:', error);
+    }
+  }
+
+  /**
+   * Get stored token for API calls
+   */
+  private getStoredToken(): any {
+    try {
+      const storedToken = localStorage.getItem(this.TOKEN_STORAGE_KEY);
+      if (storedToken) {
+        const tokenData = JSON.parse(storedToken);
+        if (tokenData.expires_at && tokenData.expires_at > Date.now()) {
+          return tokenData;
+        }
+      }
+    } catch (error) {
+      console.error('Error getting stored token:', error);
+    }
+    return null;
   }
 
   /**
@@ -32,6 +94,15 @@ export class GoogleDriveService {
    */
   async authenticate(): Promise<boolean> {
     try {
+      // Check if we already have a valid stored token
+      const storedToken = this.getStoredToken();
+      if (storedToken && this.isAuthenticated) {
+        console.log('🔄 Using stored Google Drive token');
+        await this.initializeGoogleAPI();
+        gapi.client.setToken(storedToken);
+        return true;
+      }
+
       // For browser-based authentication, we'll use Google's newer Identity Services
       const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
       const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
@@ -46,18 +117,7 @@ export class GoogleDriveService {
       // Load Google APIs and Identity Services
       await this.loadGoogleAPI();
       await this.loadGoogleIdentityServices();
-      
-      // Initialize the Google API client (without discovery docs to avoid 502 errors)
-      await new Promise<void>((resolve, reject) => {
-        gapi.load('client', {
-          callback: resolve,
-          onerror: reject
-        });
-      });
-
-      await gapi.client.init({
-        apiKey: API_KEY
-      });
+      await this.initializeGoogleAPI();
 
       // Use Google Identity Services for authentication
       const tokenResponse = await new Promise<any>((resolve, reject) => {
@@ -77,12 +137,35 @@ export class GoogleDriveService {
 
       // Set the access token for API calls
       gapi.client.setToken(tokenResponse);
+      
+      // Save token to localStorage for persistence
+      this.saveTokenToStorage(tokenResponse);
+      
       this.isAuthenticated = true;
+      console.log('✅ Google Drive authentication successful and saved');
       return true;
     } catch (error) {
       console.error('Google Drive authentication failed:', error);
       return false;
     }
+  }
+
+  /**
+   * Initialize Google API client
+   */
+  private async initializeGoogleAPI(): Promise<void> {
+    const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
+    
+    await new Promise<void>((resolve, reject) => {
+      gapi.load('client', {
+        callback: resolve,
+        onerror: reject
+      });
+    });
+
+    await gapi.client.init({
+      apiKey: API_KEY
+    });
   }
 
   /**
@@ -125,8 +208,37 @@ export class GoogleDriveService {
    * Check if user is authenticated with Google Drive
    */
   isUserAuthenticated(): boolean {
-    return this.isAuthenticated && typeof gapi !== 'undefined' && 
-           gapi.client && gapi.client.getToken() !== null;
+    // First check if we have authentication state
+    if (!this.isAuthenticated) {
+      return false;
+    }
+
+    // If gapi is loaded, check for active token
+    if (typeof gapi !== 'undefined' && gapi.client) {
+      return gapi.client.getToken() !== null;
+    }
+
+    // If gapi not loaded yet, check for stored token
+    const storedToken = this.getStoredToken();
+    return storedToken !== null;
+  }
+
+  /**
+   * Get access token for API calls
+   */
+  private getAccessToken(): string {
+    // Try to get token from gapi client first
+    if (typeof gapi !== 'undefined' && gapi.client && gapi.client.getToken()) {
+      return gapi.client.getToken().access_token;
+    }
+
+    // Fallback to stored token
+    const storedToken = this.getStoredToken();
+    if (storedToken) {
+      return storedToken.access_token;
+    }
+
+    throw new Error('No access token available');
   }
 
   /**
@@ -171,7 +283,7 @@ export class GoogleDriveService {
        const uploadResponse = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
          method: 'POST',
          headers: {
-           'Authorization': `Bearer ${gapi.client.getToken().access_token}`,
+           'Authorization': `Bearer ${this.getAccessToken()}`,
            'Content-Type': 'multipart/related; boundary="' + boundary + '"'
          },
          body: body
@@ -196,7 +308,7 @@ export class GoogleDriveService {
        await fetch(`https://www.googleapis.com/drive/v3/files/${uploadResult.id}/permissions`, {
          method: 'POST',
          headers: {
-           'Authorization': `Bearer ${gapi.client.getToken().access_token}`,
+           'Authorization': `Bearer ${this.getAccessToken()}`,
            'Content-Type': 'application/json'
          },
          body: JSON.stringify({
@@ -313,10 +425,16 @@ export class GoogleDriveService {
    * Sign out from Google Drive
    */
   async signOut(): Promise<void> {
+    // Clear gapi token if available
     if (typeof gapi !== 'undefined' && gapi.client) {
       gapi.client.setToken(null);
-      this.isAuthenticated = false;
     }
+    
+    // Clear stored token
+    localStorage.removeItem(this.TOKEN_STORAGE_KEY);
+    
+    this.isAuthenticated = false;
+    console.log('🔓 Signed out from Google Drive and cleared stored token');
   }
 
   /**
