@@ -1,6 +1,6 @@
 {
   "env": {
-    "SITE_ACCESS_ENABLED": "true"
+    "SITE_ACCESS_ENABLED": "false"
   },
   "rewrites": [
     {
