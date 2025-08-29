@@ -191,11 +191,17 @@ const MainApp: React.FC = () => {
                 <p className="text-gray-400 mb-4">Arrange your images if needed. Up to {MAX_IMAGES} allowed.</p>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {images.map((image, index) => (
-                        <div key={index} className="relative group aspect-video rounded-md overflow-hidden border-2 border-gray-600">
-                            <img src={URL.createObjectURL(image)} alt={`upload-preview-${index}`} className="w-full h-full object-cover"/>
+                        <div key={index} className="relative group rounded-md overflow-hidden border-2 border-gray-600 bg-gray-800/30">
+                            <div className="aspect-square flex items-center justify-center p-2">
+                                <img 
+                                    src={URL.createObjectURL(image)} 
+                                    alt={`upload-preview-${index}`} 
+                                    className="max-w-full max-h-full object-contain rounded"
+                                />
+                            </div>
                             <button 
                               onClick={() => handleRemoveImage(index)}
-                              className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500"
+                              className="absolute top-2 right-2 bg-black/70 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500"
                               aria-label="Remove image"
                             >
                                 <TrashIcon className="w-4 h-4" />
@@ -205,7 +211,7 @@ const MainApp: React.FC = () => {
                     {images.length < MAX_IMAGES && (
                         <button 
                           onClick={() => fileInputRef.current?.click()}
-                          className="flex flex-col items-center justify-center aspect-video rounded-md border-2 border-dashed border-gray-600 text-gray-400 hover:bg-gray-700/50 hover:border-gray-500 transition-colors"
+                          className="flex flex-col items-center justify-center aspect-square rounded-md border-2 border-dashed border-gray-600 text-gray-400 hover:bg-gray-700/50 hover:border-gray-500 transition-colors"
                         >
                            <AddIcon className="w-8 h-8" />
                            <span className="text-sm font-semibold mt-1">Add More</span>
