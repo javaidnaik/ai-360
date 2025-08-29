@@ -60,7 +60,7 @@ const MainApp: React.FC = () => {
   const [view, setView] = useState<View>(user ? 'editor' : 'start');
   const [images, setImages] = useState<File[]>([]);
   const [prompt, setPrompt] = useState<string>('');
-  const [animationStyle, setAnimationStyle] = useState<string>('Slow Spin');
+  const [animationStyle, setAnimationStyle] = useState<string>('Cinematic Zoom');
   const [loadingMessage, setLoadingMessage] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
@@ -142,6 +142,42 @@ const MainApp: React.FC = () => {
         case 'Orbit':
             animationPrompt = 'Create a video where the camera orbits around the object, showing it from all angles.';
             break;
+        case 'Cinematic Zoom':
+            animationPrompt = 'Create a dramatic cinematic video with the camera slowly zooming in while rotating around the object, creating a professional film-like quality.';
+            break;
+        case 'Spiral Ascent':
+            animationPrompt = 'Create a mesmerizing video where the camera spirals upward around the object while rotating, creating a dynamic ascending motion.';
+            break;
+        case 'Golden Hour':
+            animationPrompt = 'Create a beautiful video with warm golden hour lighting that shifts around the object during a smooth 360-degree rotation, creating dramatic shadows and highlights.';
+            break;
+        case 'Floating Dream':
+            animationPrompt = 'Create an ethereal video where the object gently floats and bobs while slowly rotating, as if suspended in a dreamlike state.';
+            break;
+        case 'Studio Turntable':
+            animationPrompt = 'Create a professional product showcase video with clean studio lighting and a precise turntable rotation, perfect for commercial presentation.';
+            break;
+        case 'Figure-8 Orbit':
+            animationPrompt = 'Create a dynamic video where the camera follows a figure-8 pattern around the object, showing unique angles and perspectives.';
+            break;
+        case 'Pulsing Energy':
+            animationPrompt = 'Create an energetic video where the object subtly pulses and scales while rotating, as if radiating energy or power.';
+            break;
+        case 'Time Lapse Spin':
+            animationPrompt = 'Create a fast-paced time lapse video with rapid rotation and motion blur effects, showing the object in an accelerated time flow.';
+            break;
+        case 'Spotlight Drama':
+            animationPrompt = 'Create a dramatic video with a single moving spotlight that follows the rotation, creating strong contrasts and theatrical lighting effects.';
+            break;
+        case 'Kaleidoscope':
+            animationPrompt = 'Create a mesmerizing kaleidoscope-style video with multiple reflections and symmetrical patterns of the object during rotation.';
+            break;
+        case 'Reverse Momentum':
+            animationPrompt = 'Create an intriguing video that starts with fast rotation and dramatically slows down to a gentle stop, creating a sense of momentum loss.';
+            break;
+        case 'Dolly Zoom':
+            animationPrompt = 'Create a cinematic dolly zoom effect (vertigo effect) where the camera zooms while moving, keeping the object the same size but changing the perspective dramatically.';
+            break;
         default:
             animationPrompt = 'Create a 360-degree video of the object.';
     }
@@ -217,7 +253,7 @@ const MainApp: React.FC = () => {
   const handleReset = useCallback(() => {
     setImages([]);
     setPrompt('');
-    setAnimationStyle('Slow Spin');
+    setAnimationStyle('Cinematic Zoom');
     setLoadingMessage('');
     setError(null);
     // videoUrl is revoked when the component unmounts or when a new video is made
@@ -300,9 +336,29 @@ const MainApp: React.FC = () => {
                     onChange={(e) => setAnimationStyle(e.target.value)}
                     className="w-full bg-gray-800 border border-gray-600 text-gray-200 rounded-lg p-3 text-base focus:ring-2 focus:ring-purple-500 focus:outline-none transition"
                 >
-                    <option>Slow Spin</option>
-                    <option>Fast Spin</option>
-                    <option>Orbit</option>
+                    <optgroup label="🎬 Cinematic">
+                        <option>Cinematic Zoom</option>
+                        <option>Golden Hour</option>
+                        <option>Spotlight Drama</option>
+                        <option>Dolly Zoom</option>
+                    </optgroup>
+                    <optgroup label="🌟 Creative">
+                        <option>Spiral Ascent</option>
+                        <option>Figure-8 Orbit</option>
+                        <option>Floating Dream</option>
+                        <option>Pulsing Energy</option>
+                        <option>Kaleidoscope</option>
+                        <option>Reverse Momentum</option>
+                    </optgroup>
+                    <optgroup label="⚡ Dynamic">
+                        <option>Time Lapse Spin</option>
+                        <option>Fast Spin</option>
+                        <option>Orbit</option>
+                    </optgroup>
+                    <optgroup label="📐 Professional">
+                        <option>Studio Turntable</option>
+                        <option>Slow Spin</option>
+                    </optgroup>
                 </select>
             </div>
 
