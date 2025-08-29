@@ -149,13 +149,13 @@ const StartScreen: React.FC<StartScreenProps> = ({ onFilesSelect, onShowGallery,
                 <div className="absolute inset-0 bg-white/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </button>
             )}
-            <input id="image-upload-start" type="file" className="hidden" accept="image/*" onChange={handleFileChange} multiple />
+            <input id="image-upload-start" type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
             
             <div className="flex items-center gap-2 text-gray-400">
               <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
               <p className="text-sm">
                 {isAuthenticated 
-                  ? "Drag & drop up to 4 images • AI-enhanced processing • High-quality output"
+                  ? "Drag & drop one image • AI-enhanced processing • High-quality output"
                   : "Login required to create videos • Secure authentication • Personal gallery"
                 }
               </p>
@@ -259,7 +259,7 @@ const StartScreen: React.FC<StartScreenProps> = ({ onFilesSelect, onShowGallery,
               Login to Get Started
             </button>
           )}
-          <input id="image-upload-bottom" type="file" className="hidden" accept="image/*" onChange={handleFileChange} multiple />
+          <input id="image-upload-bottom" type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
         </div>
       </div>
     </div>

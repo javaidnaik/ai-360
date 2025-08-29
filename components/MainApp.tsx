@@ -14,7 +14,7 @@ import { AddIcon, TrashIcon, VideoIcon } from './icons';
 import { VideoCreation } from '../types';
 
 type View = 'start' | 'editor' | 'loading' | 'result' | 'gallery' | 'error';
-const MAX_IMAGES = 4;
+const MAX_IMAGES = 1;
 
 // Helper to process the primary image for 360° video generation
 const processImageForGeneration = (imageFiles: File[]): Promise<File> => {
@@ -90,12 +90,13 @@ const MainApp: React.FC = () => {
   }, [user, view]);
 
   const handleFilesSelect = useCallback((files: FileList) => {
-    const newImages = Array.from(files).slice(0, MAX_IMAGES - images.length);
-    if (newImages.length > 0) {
-      setImages(prev => [...prev, ...newImages]);
+    // Only take the first file since we only allow one image
+    const selectedFile = files[0];
+    if (selectedFile) {
+      setImages([selectedFile]); // Replace any existing image
       setView('editor');
     }
-  }, [images.length]);
+  }, []);
 
   const handleRemoveImage = useCallback((indexToRemove: number) => {
     setImages(prev => prev.filter((_, index) => index !== indexToRemove));
@@ -195,34 +196,37 @@ const MainApp: React.FC = () => {
           <div className="w-full max-w-4xl mx-auto flex flex-col items-center gap-8 animate-fade-in p-4">
             <Header onShowGallery={() => setView('gallery')} hasCreations={galleryVideos.length > 0}/>
             <div className="w-full bg-black/20 border border-gray-700/50 rounded-lg p-6 backdrop-blur-sm">
-                <h2 className="text-2xl font-bold text-gray-100 mb-1">Your Images</h2>
-                <p className="text-gray-400 mb-4">Arrange your images if needed. Up to {MAX_IMAGES} allowed.</p>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {images.map((image, index) => (
-                        <div key={index} className="relative group rounded-md overflow-hidden border-2 border-gray-600 bg-gray-800/30">
-                            <div className="aspect-square flex items-center justify-center p-2">
+                <h2 className="text-2xl font-bold text-gray-100 mb-1">Your Image</h2>
+                <p className="text-gray-400 mb-4">Upload one image to create your 360° video.</p>
+                <div className="flex justify-center">
+                    {images.length > 0 ? (
+                        <div className="relative group rounded-md overflow-hidden border-2 border-gray-600 bg-gray-800/30 max-w-md w-full">
+                            <div className="aspect-video flex items-center justify-center p-4">
                                 <img 
-                                    src={URL.createObjectURL(image)} 
-                                    alt={`upload-preview-${index}`} 
+                                    src={URL.createObjectURL(images[0])} 
+                                    alt="Selected image for 360° video" 
                                     className="max-w-full max-h-full object-contain rounded"
                                 />
                             </div>
                             <button 
-                              onClick={() => handleRemoveImage(index)}
+                              onClick={() => handleRemoveImage(0)}
                               className="absolute top-2 right-2 bg-black/70 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500"
                               aria-label="Remove image"
                             >
                                 <TrashIcon className="w-4 h-4" />
                             </button>
+                            <div className="absolute bottom-2 left-2 bg-black/70 text-white px-2 py-1 rounded text-xs">
+                                Ready for 360° generation
+                            </div>
                         </div>
-                    ))}
-                    {images.length < MAX_IMAGES && (
+                    ) : (
                         <button 
                           onClick={() => fileInputRef.current?.click()}
-                          className="flex flex-col items-center justify-center aspect-square rounded-md border-2 border-dashed border-gray-600 text-gray-400 hover:bg-gray-700/50 hover:border-gray-500 transition-colors"
+                          className="flex flex-col items-center justify-center aspect-video rounded-md border-2 border-dashed border-gray-600 text-gray-400 hover:bg-gray-700/50 hover:border-gray-500 transition-colors max-w-md w-full p-8"
                         >
-                           <AddIcon className="w-8 h-8" />
-                           <span className="text-sm font-semibold mt-1">Add More</span>
+                           <AddIcon className="w-12 h-12 mb-4" />
+                           <span className="text-lg font-semibold mb-2">Upload Image</span>
+                           <span className="text-sm text-center">Click to select or drag & drop your image here</span>
                         </button>
                     )}
                 </div>
@@ -261,7 +265,7 @@ const MainApp: React.FC = () => {
                 <VideoIcon className="w-6 h-6" />
                 Generate 360° Video
             </button>
-            <input type="file" ref={fileInputRef} className="hidden" accept="image/*" multiple onChange={(e) => e.target.files && handleFilesSelect(e.target.files)} />
+            <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => e.target.files && handleFilesSelect(e.target.files)} />
           </div>
         );
 
