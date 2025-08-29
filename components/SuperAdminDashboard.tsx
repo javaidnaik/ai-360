@@ -10,7 +10,7 @@ import * as db from '../services/supabaseDb';
 
 const SuperAdminDashboard: React.FC = () => {
   const { user, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState<'analytics' | 'users' | 'models'>('analytics');
+  const [activeTab, setActiveTab] = useState<'analytics' | 'users' | 'models' | 'maintenance'>('analytics');
   const [analytics, setAnalytics] = useState<UserAnalytics | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [models, setModels] = useState<AIModelConfig[]>([]);
@@ -21,6 +21,13 @@ const SuperAdminDashboard: React.FC = () => {
     apiKey: '',
     isActive: true
   });
+  const [maintenanceSettings, setMaintenanceSettings] = useState<db.MaintenanceSettings | null>(null);
+  const [maintenanceForm, setMaintenanceForm] = useState({
+    isMaintenanceMode: false,
+    maintenanceTitle: 'Site Under Maintenance',
+    maintenanceMessage: 'We are currently performing scheduled maintenance. Please check back soon.',
+    estimatedCompletion: ''
+  });
 
   useEffect(() => {
     loadData();
@@ -29,15 +36,29 @@ const SuperAdminDashboard: React.FC = () => {
   const loadData = async () => {
     try {
       setIsLoading(true);
-      const [analyticsData, usersData, modelsData] = await Promise.all([
+      const [analyticsData, usersData, modelsData, maintenanceData] = await Promise.all([
         db.getUserAnalytics(),
         db.getAllUsers(),
-        db.getAllAIModels()
+        db.getAllAIModels(),
+        db.getMaintenanceSettings()
       ]);
       
       setAnalytics(analyticsData);
       setUsers(usersData);
       setModels(modelsData);
+      setMaintenanceSettings(maintenanceData);
+      
+      // Update maintenance form with current settings
+      if (maintenanceData) {
+        setMaintenanceForm({
+          isMaintenanceMode: maintenanceData.isMaintenanceMode,
+          maintenanceTitle: maintenanceData.maintenanceTitle,
+          maintenanceMessage: maintenanceData.maintenanceMessage,
+          estimatedCompletion: maintenanceData.estimatedCompletion 
+            ? maintenanceData.estimatedCompletion.toISOString().slice(0, 16) 
+            : ''
+        });
+      }
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -97,6 +118,36 @@ const SuperAdminDashboard: React.FC = () => {
     }
   };
 
+  const handleMaintenanceUpdate = async () => {
+    try {
+      const estimatedCompletion = maintenanceForm.estimatedCompletion 
+        ? new Date(maintenanceForm.estimatedCompletion)
+        : undefined;
+
+      await db.updateMaintenanceSettings(
+        maintenanceForm.isMaintenanceMode,
+        maintenanceForm.maintenanceMessage,
+        maintenanceForm.maintenanceTitle,
+        estimatedCompletion,
+        user?.id
+      );
+
+      // Reload maintenance settings
+      const updatedSettings = await db.getMaintenanceSettings();
+      setMaintenanceSettings(updatedSettings);
+      
+      alert(`Maintenance mode ${maintenanceForm.isMaintenanceMode ? 'enabled' : 'disabled'} successfully!`);
+      
+      // If maintenance mode is enabled, we could optionally redirect or show a warning
+      if (maintenanceForm.isMaintenanceMode) {
+        alert('⚠️ Maintenance mode is now ACTIVE. Regular users will see the maintenance page.');
+      }
+    } catch (error) {
+      console.error('Failed to update maintenance settings:', error);
+      alert('Failed to update maintenance settings. Please try again.');
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900 flex items-center justify-center">
@@ -138,7 +189,8 @@ const SuperAdminDashboard: React.FC = () => {
           {[
             { id: 'analytics', label: 'Analytics' },
             { id: 'users', label: 'Users' },
-            { id: 'models', label: 'AI Models' }
+            { id: 'models', label: 'AI Models' },
+            { id: 'maintenance', label: 'Maintenance' }
           ].map((tab) => (
             <button
               key={tab.id}
@@ -344,6 +396,153 @@ const SuperAdminDashboard: React.FC = () => {
                 </table>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Maintenance Tab */}
+        {activeTab === 'maintenance' && (
+          <div className="space-y-6">
+            {/* Current Status */}
+            <div className="bg-black/20 backdrop-blur-sm border border-gray-700/50 rounded-lg p-6">
+              <h3 className="text-xl font-semibold text-white mb-4">Current Maintenance Status</h3>
+              <div className="flex items-center gap-4 mb-4">
+                <div className={`w-4 h-4 rounded-full ${
+                  maintenanceSettings?.isMaintenanceMode 
+                    ? 'bg-red-500 animate-pulse' 
+                    : 'bg-green-500'
+                }`}></div>
+                <span className="text-white font-medium">
+                  {maintenanceSettings?.isMaintenanceMode ? 'MAINTENANCE MODE ACTIVE' : 'Site is operational'}
+                </span>
+              </div>
+              
+              {maintenanceSettings?.isMaintenanceMode && (
+                <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 mb-4">
+                  <p className="text-red-300 mb-2">
+                    ⚠️ <strong>Warning:</strong> Maintenance mode is currently active. 
+                    Regular users cannot access the site.
+                  </p>
+                  {maintenanceSettings.enabledAt && (
+                    <p className="text-red-300 text-sm">
+                      Enabled: {maintenanceSettings.enabledAt.toLocaleString()}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Maintenance Controls */}
+            <div className="bg-black/20 backdrop-blur-sm border border-gray-700/50 rounded-lg p-6">
+              <h3 className="text-xl font-semibold text-white mb-4">Maintenance Controls</h3>
+              
+              <div className="space-y-4">
+                {/* Enable/Disable Toggle */}
+                <div>
+                  <label className="flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      checked={maintenanceForm.isMaintenanceMode}
+                      onChange={(e) => setMaintenanceForm({
+                        ...maintenanceForm,
+                        isMaintenanceMode: e.target.checked
+                      })}
+                      className="w-5 h-5 text-red-600 bg-gray-700 border-gray-600 rounded focus:ring-red-500 focus:ring-2"
+                    />
+                    <span className="text-white font-medium">Enable Maintenance Mode</span>
+                  </label>
+                  <p className="text-gray-400 text-sm mt-1">
+                    When enabled, only super admins can access the site
+                  </p>
+                </div>
+
+                {/* Title */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Maintenance Page Title
+                  </label>
+                  <input
+                    type="text"
+                    value={maintenanceForm.maintenanceTitle}
+                    onChange={(e) => setMaintenanceForm({
+                      ...maintenanceForm,
+                      maintenanceTitle: e.target.value
+                    })}
+                    className="w-full p-3 bg-gray-800/50 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none"
+                    placeholder="Site Under Maintenance"
+                  />
+                </div>
+
+                {/* Message */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Maintenance Message
+                  </label>
+                  <textarea
+                    value={maintenanceForm.maintenanceMessage}
+                    onChange={(e) => setMaintenanceForm({
+                      ...maintenanceForm,
+                      maintenanceMessage: e.target.value
+                    })}
+                    rows={4}
+                    className="w-full p-3 bg-gray-800/50 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none resize-none"
+                    placeholder="We are currently performing scheduled maintenance. Please check back soon."
+                  />
+                </div>
+
+                {/* Estimated Completion */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Estimated Completion (Optional)
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={maintenanceForm.estimatedCompletion}
+                    onChange={(e) => setMaintenanceForm({
+                      ...maintenanceForm,
+                      estimatedCompletion: e.target.value
+                    })}
+                    className="w-full p-3 bg-gray-800/50 border border-gray-600 rounded-lg text-white focus:border-blue-500 focus:outline-none"
+                  />
+                  <p className="text-gray-400 text-sm mt-1">
+                    Leave empty if completion time is unknown
+                  </p>
+                </div>
+
+                {/* Update Button */}
+                <div className="pt-4">
+                  <button
+                    onClick={handleMaintenanceUpdate}
+                    className={`w-full py-3 px-6 rounded-lg font-medium transition ${
+                      maintenanceForm.isMaintenanceMode
+                        ? 'bg-red-600 hover:bg-red-700 text-white'
+                        : 'bg-green-600 hover:bg-green-700 text-white'
+                    }`}
+                  >
+                    {maintenanceForm.isMaintenanceMode ? '🔒 Enable Maintenance Mode' : '✅ Disable Maintenance Mode'}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Preview */}
+            {maintenanceForm.isMaintenanceMode && (
+              <div className="bg-black/20 backdrop-blur-sm border border-gray-700/50 rounded-lg p-6">
+                <h3 className="text-xl font-semibold text-white mb-4">Preview</h3>
+                <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-600">
+                  <h4 className="text-2xl font-bold text-white mb-2">
+                    {maintenanceForm.maintenanceTitle}
+                  </h4>
+                  <p className="text-gray-300 mb-4">
+                    {maintenanceForm.maintenanceMessage}
+                  </p>
+                  {maintenanceForm.estimatedCompletion && (
+                    <p className="text-blue-300 text-sm">
+                      Estimated completion: {new Date(maintenanceForm.estimatedCompletion).toLocaleString()}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

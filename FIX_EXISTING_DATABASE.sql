@@ -37,10 +37,23 @@ CREATE TABLE IF NOT EXISTS user_settings (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Create maintenance_settings table for site-wide maintenance mode
+CREATE TABLE IF NOT EXISTS maintenance_settings (
+  id SERIAL PRIMARY KEY,
+  is_maintenance_mode BOOLEAN DEFAULT FALSE,
+  maintenance_message TEXT DEFAULT 'We are currently performing scheduled maintenance. Please check back soon.',
+  maintenance_title VARCHAR(255) DEFAULT 'Site Under Maintenance',
+  estimated_completion TIMESTAMP WITH TIME ZONE,
+  enabled_by INTEGER REFERENCES users(id),
+  enabled_at TIMESTAMP WITH TIME ZONE,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Create missing indexes
 CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token ON password_reset_tokens(token);
 CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id ON password_reset_tokens(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_settings_user_id ON user_settings(user_id);
+CREATE INDEX IF NOT EXISTS idx_maintenance_settings_is_maintenance_mode ON maintenance_settings(is_maintenance_mode);
 
 -- Fix Row Level Security Policies
 DO $$ 
@@ -54,6 +67,11 @@ BEGIN
     ALTER TABLE user_settings ENABLE ROW LEVEL SECURITY;
     DROP POLICY IF EXISTS "Allow all operations on user_settings" ON user_settings;
     CREATE POLICY "Allow all operations on user_settings" ON user_settings FOR ALL USING (true);
+    
+    -- Maintenance settings table
+    ALTER TABLE maintenance_settings ENABLE ROW LEVEL SECURITY;
+    DROP POLICY IF EXISTS "Allow all operations on maintenance_settings" ON maintenance_settings;
+    CREATE POLICY "Allow all operations on maintenance_settings" ON maintenance_settings FOR ALL USING (true);
 END $$;
 
 -- Update super admin with correct password and add names if missing
@@ -68,6 +86,11 @@ WHERE email = 'admin@pixshop.com';
 INSERT INTO users (email, password_hash, role, created_at, first_name, last_name) 
 VALUES ('admin@pixshop.com', 'b80921595f7fd56db0acd8581d5abafeca181b5beadbe1f6be83477076d22ccd', 'super_admin', NOW(), 'Super', 'Admin')
 ON CONFLICT (email) DO NOTHING;
+
+-- Initialize maintenance settings (disabled by default)
+INSERT INTO maintenance_settings (is_maintenance_mode, maintenance_message, maintenance_title) 
+VALUES (FALSE, 'We are currently performing scheduled maintenance. Please check back soon.', 'Site Under Maintenance')
+ON CONFLICT DO NOTHING;
 
 -- Verify setup
 SELECT 'Database fixes applied successfully!' as status;

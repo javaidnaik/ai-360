@@ -523,3 +523,113 @@ export async function initializeDefaultSuperAdmin(): Promise<void> {
     console.error('Failed to initialize default super admin:', error)
   }
 }
+
+// Maintenance Settings Management
+export interface MaintenanceSettings {
+  id: number
+  isMaintenanceMode: boolean
+  maintenanceMessage: string
+  maintenanceTitle: string
+  estimatedCompletion?: Date
+  enabledBy?: number
+  enabledAt?: Date
+  updatedAt: Date
+}
+
+export async function getMaintenanceSettings(): Promise<MaintenanceSettings | null> {
+  const { data, error } = await supabase
+    .from('maintenance_settings')
+    .select('*')
+    .limit(1)
+    .single()
+
+  if (error) {
+    if (error.code === 'PGRST116') return null // No rows returned
+    throw new Error(`Failed to get maintenance settings: ${error.message}`)
+  }
+
+  return {
+    id: data.id,
+    isMaintenanceMode: data.is_maintenance_mode,
+    maintenanceMessage: data.maintenance_message,
+    maintenanceTitle: data.maintenance_title,
+    estimatedCompletion: data.estimated_completion ? new Date(data.estimated_completion) : undefined,
+    enabledBy: data.enabled_by,
+    enabledAt: data.enabled_at ? new Date(data.enabled_at) : undefined,
+    updatedAt: new Date(data.updated_at)
+  }
+}
+
+export async function updateMaintenanceSettings(
+  isMaintenanceMode: boolean,
+  maintenanceMessage?: string,
+  maintenanceTitle?: string,
+  estimatedCompletion?: Date,
+  enabledBy?: number
+): Promise<MaintenanceSettings> {
+  // Get existing settings or create default
+  let existingSettings = await getMaintenanceSettings()
+  
+  if (!existingSettings) {
+    // Create initial settings if none exist
+    const { data, error } = await supabase
+      .from('maintenance_settings')
+      .insert({
+        is_maintenance_mode: isMaintenanceMode,
+        maintenance_message: maintenanceMessage || 'We are currently performing scheduled maintenance. Please check back soon.',
+        maintenance_title: maintenanceTitle || 'Site Under Maintenance',
+        estimated_completion: estimatedCompletion,
+        enabled_by: enabledBy,
+        enabled_at: isMaintenanceMode ? new Date() : null,
+        updated_at: new Date()
+      })
+      .select('*')
+      .single()
+
+    if (error) {
+      throw new Error(`Failed to create maintenance settings: ${error.message}`)
+    }
+
+    return {
+      id: data.id,
+      isMaintenanceMode: data.is_maintenance_mode,
+      maintenanceMessage: data.maintenance_message,
+      maintenanceTitle: data.maintenance_title,
+      estimatedCompletion: data.estimated_completion ? new Date(data.estimated_completion) : undefined,
+      enabledBy: data.enabled_by,
+      enabledAt: data.enabled_at ? new Date(data.enabled_at) : undefined,
+      updatedAt: new Date(data.updated_at)
+    }
+  }
+
+  // Update existing settings
+  const { data, error } = await supabase
+    .from('maintenance_settings')
+    .update({
+      is_maintenance_mode: isMaintenanceMode,
+      maintenance_message: maintenanceMessage || existingSettings.maintenanceMessage,
+      maintenance_title: maintenanceTitle || existingSettings.maintenanceTitle,
+      estimated_completion: estimatedCompletion,
+      enabled_by: enabledBy,
+      enabled_at: isMaintenanceMode ? new Date() : null,
+      updated_at: new Date()
+    })
+    .eq('id', existingSettings.id)
+    .select('*')
+    .single()
+
+  if (error) {
+    throw new Error(`Failed to update maintenance settings: ${error.message}`)
+  }
+
+  return {
+    id: data.id,
+    isMaintenanceMode: data.is_maintenance_mode,
+    maintenanceMessage: data.maintenance_message,
+    maintenanceTitle: data.maintenance_title,
+    estimatedCompletion: data.estimated_completion ? new Date(data.estimated_completion) : undefined,
+    enabledBy: data.enabled_by,
+    enabledAt: data.enabled_at ? new Date(data.enabled_at) : undefined,
+    updatedAt: new Date(data.updated_at)
+  }
+}
