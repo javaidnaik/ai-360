@@ -11,12 +11,13 @@ import Header from './Header';
 import Spinner from './Spinner';
 import StartScreen from './StartScreen';
 import MyCreations from './MyCreations';
+import ImageEditor from './ImageEditor';
 import GoogleDriveAuth from './GoogleDriveAuth';
 import { AddIcon, TrashIcon, VideoIcon, DownloadIcon } from './icons';
 import { VideoCreation } from '../types';
 import { googleDriveService } from '../services/googleDriveService';
 
-type View = 'start' | 'editor' | 'loading' | 'result' | 'gallery' | 'error' | 'creations';
+type View = 'start' | 'editor' | 'loading' | 'result' | 'gallery' | 'error' | 'creations' | 'image-editor';
 const MAX_IMAGES = 1;
 
 // Helper to process the primary image for 360° video generation
@@ -315,6 +316,10 @@ const MainApp: React.FC = () => {
     setView('editor');
   };
 
+  const handleShowImageEditor = () => {
+    setView('image-editor');
+  };
+
   const handleReset = useCallback(() => {
     setImages([]);
     setPrompt('');
@@ -337,7 +342,15 @@ const MainApp: React.FC = () => {
   const renderContent = () => {
     switch (view) {
       case 'start':
-        return <StartScreen onFilesSelect={handleFilesSelect} onShowGallery={handleShowCreations} hasCreations={galleryVideos.length > 0} />;
+        return (
+          <StartScreen 
+            onFilesSelect={handleFilesSelect} 
+            onShowGallery={handleShowCreations} 
+            onShowVideoEditor={handleShowEditor}
+            onShowImageEditor={handleShowImageEditor}
+            hasCreations={galleryVideos.length > 0} 
+          />
+        );
       
       case 'editor':
         return (
@@ -349,6 +362,21 @@ const MainApp: React.FC = () => {
               hasCreations={galleryVideos.length > 0}
               currentView="editor"
             />
+
+            {/* Navigation Tabs */}
+            <div className="flex gap-4 mb-6">
+              <button
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium border border-blue-500"
+              >
+                📹 Video Generator
+              </button>
+              <button
+                onClick={handleShowImageEditor}
+                className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg font-medium transition-colors border border-white/20"
+              >
+                🎨 Image Editor
+              </button>
+            </div>
             
             {/* Google Drive Authentication */}
             <GoogleDriveAuth 
@@ -495,6 +523,16 @@ const MainApp: React.FC = () => {
       
       case 'creations':
         return <MyCreations onBackToStart={handleBackToStart} />;
+
+      case 'image-editor':
+        return (
+          <ImageEditor 
+            onBackToStart={handleBackToStart}
+            onShowCreations={handleShowCreations}
+            onShowVideoEditor={handleShowEditor}
+            hasCreations={galleryVideos.length > 0}
+          />
+        );
 
       case 'gallery':
         return (
