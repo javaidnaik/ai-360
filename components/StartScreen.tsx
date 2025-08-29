@@ -49,31 +49,31 @@ const StartScreen: React.FC<StartScreenProps> = ({ onFilesSelect, onShowGallery,
   const features = [
     {
       icon: SparklesIcon,
-      title: "AI-Powered Magic",
-      description: "Advanced AI transforms your static images into dynamic 360° videos with seamless motion"
+      title: "Gemini AI Integration",
+      description: "Leverages Google's advanced Gemini AI to transform static images into dynamic 360° video content"
     },
     {
       icon: LightningIcon,
-      title: "Lightning Fast",
-      description: "Generate professional-quality videos in minutes, not hours. Perfect for social media and presentations"
+      title: "Efficient Processing",
+      description: "Streamlined workflow for our team to create professional video content quickly and consistently"
     },
     {
       icon: ShieldIcon,
-      title: "Privacy First",
-      description: "Your images are processed securely. We never store or share your personal content"
+      title: "Secure Internal Tool",
+      description: "Built for our organization's content creation needs with secure processing and user authentication"
     },
     {
       icon: PlayIcon,
-      title: "Cinema Quality",
-      description: "Export high-resolution videos ready for any platform - Instagram, TikTok, YouTube, or presentations"
+      title: "Professional Output",
+      description: "Generate high-quality 360° videos suitable for marketing, presentations, and product showcases"
     }
   ];
 
   const useCases = [
-    { title: "Product Showcases", description: "Perfect for e-commerce and marketing" },
-    { title: "Real Estate Tours", description: "Immersive property presentations" },
-    { title: "Art & Design", description: "Showcase creative work dynamically" },
-    { title: "Social Media", description: "Eye-catching content that stands out" }
+    { title: "Marketing Content", description: "Create engaging visuals for campaigns" },
+    { title: "Product Demos", description: "Showcase products from every angle" },
+    { title: "Training Materials", description: "Interactive content for internal training" },
+    { title: "Presentations", description: "Professional content for client meetings" }
   ];
 
   return (
@@ -105,42 +105,38 @@ const StartScreen: React.FC<StartScreenProps> = ({ onFilesSelect, onShowGallery,
 
           {/* Subtitle */}
           <p className="max-w-2xl text-xl text-gray-300 md:text-2xl mt-4 leading-relaxed">
-            Transform your photos into <span className="text-purple-400 font-semibold">cinematic 360° experiences</span> with the power of AI. 
-            No technical skills required.
+            Internal tool for creating <span className="text-purple-400 font-semibold">professional 360° videos</span> using Google's Gemini AI. 
+            Designed for our team's content creation needs.
           </p>
 
           {/* CTA Section */}
           <div className="mt-10 flex flex-col items-center gap-6">
             <label htmlFor="image-upload-start" className="relative inline-flex items-center justify-center px-12 py-6 text-xl font-bold text-white bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl cursor-pointer group hover:from-blue-500 hover:to-purple-500 transition-all duration-300 shadow-lg shadow-purple-600/30 hover:shadow-xl hover:shadow-purple-500/40 hover:-translate-y-1 transform">
               <UploadIcon className="w-7 h-7 mr-4" />
-              Start Creating Now
+              Start Creating
               <div className="absolute inset-0 bg-white/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             </label>
             <input id="image-upload-start" type="file" className="hidden" accept="image/*" onChange={handleFileChange} multiple />
             
             <div className="flex items-center gap-2 text-gray-400">
-              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <p className="text-sm">Drag & drop up to 4 images • Free to use • No signup required</p>
+              <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+              <p className="text-sm">Drag & drop up to 4 images • Powered by Gemini AI • For internal team use</p>
             </div>
           </div>
 
           {/* Quick Stats */}
-          <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-8 w-full max-w-3xl">
+          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-2xl">
             <div className="text-center">
-              <div className="text-3xl font-bold text-purple-400">10K+</div>
-              <div className="text-sm text-gray-400">Videos Created</div>
+              <div className="text-3xl font-bold text-blue-400">AI</div>
+              <div className="text-sm text-gray-400">Powered Generation</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-blue-400">30 sec</div>
-              <div className="text-sm text-gray-400">Average Process Time</div>
+              <div className="text-3xl font-bold text-purple-400">360°</div>
+              <div className="text-sm text-gray-400">Immersive Videos</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-green-400">4K</div>
-              <div className="text-sm text-gray-400">Max Resolution</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-pink-400">100%</div>
-              <div className="text-sm text-gray-400">Free Forever</div>
+              <div className="text-3xl font-bold text-green-400">HD</div>
+              <div className="text-sm text-gray-400">Quality Output</div>
             </div>
           </div>
 
@@ -161,9 +157,9 @@ const StartScreen: React.FC<StartScreenProps> = ({ onFilesSelect, onShowGallery,
       <div className="w-full py-20 px-8">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-100 mb-4">Why Choose Pixshop?</h2>
+            <h2 className="text-4xl font-bold text-gray-100 mb-4">Internal Video Creation Tool</h2>
             <p className="text-xl text-gray-400 max-w-2xl mx-auto">
-              The most advanced 360° video generator, powered by cutting-edge AI technology
+              Streamline our team's 360° video production with Google's Gemini AI technology
             </p>
           </div>
 
@@ -187,8 +183,8 @@ const StartScreen: React.FC<StartScreenProps> = ({ onFilesSelect, onShowGallery,
       <div className="w-full py-20 px-8 bg-black/10">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-100 mb-4">Perfect For Every Creator</h2>
-            <p className="text-xl text-gray-400">From businesses to artists, everyone can create stunning 360° content</p>
+            <h2 className="text-4xl font-bold text-gray-100 mb-4">Team Use Cases</h2>
+            <p className="text-xl text-gray-400">How our organization can leverage 360° video content</p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -205,15 +201,15 @@ const StartScreen: React.FC<StartScreenProps> = ({ onFilesSelect, onShowGallery,
       {/* CTA Section */}
       <div className="w-full py-20 px-8">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-4xl font-bold text-gray-100 mb-6">Ready to Create Magic?</h2>
+          <h2 className="text-4xl font-bold text-gray-100 mb-6">Ready to Create Content?</h2>
           <p className="text-xl text-gray-400 mb-10 max-w-2xl mx-auto">
-            Join thousands of creators who are already making stunning 360° videos. 
-            Upload your first images and see the magic happen.
+            Start creating professional 360° videos for your projects. 
+            Upload your images and let Gemini AI do the work.
           </p>
           
           <label htmlFor="image-upload-bottom" className="inline-flex items-center justify-center px-10 py-5 text-xl font-bold text-white bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl cursor-pointer hover:from-purple-500 hover:to-pink-500 transition-all duration-300 shadow-lg shadow-purple-600/30 hover:shadow-xl hover:shadow-purple-500/40 hover:-translate-y-1 transform">
             <UploadIcon className="w-6 h-6 mr-3" />
-            Get Started - It's Free!
+            Start Creating
           </label>
           <input id="image-upload-bottom" type="file" className="hidden" accept="image/*" onChange={handleFileChange} multiple />
         </div>
