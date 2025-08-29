@@ -39,6 +39,9 @@ export class GoogleDriveService {
       const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
       const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
       
+      console.log('🔧 Debug - CLIENT_ID loaded:', CLIENT_ID ? 'YES' : 'NO');
+      console.log('🔧 Debug - API_KEY loaded:', API_KEY ? 'YES' : 'NO');
+      
       if (!CLIENT_ID || !API_KEY || CLIENT_ID === 'your-google-client-id' || API_KEY === 'your-google-api-key') {
         throw new Error('Google Drive API credentials not configured. Please set VITE_GOOGLE_CLIENT_ID and VITE_GOOGLE_API_KEY environment variables.');
       }
