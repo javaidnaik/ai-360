@@ -405,6 +405,85 @@ export async function resetPassword(token: string, newPassword: string): Promise
   return true
 }
 
+// User Settings Management (Google Drive, etc.)
+export async function getUserSettings(userId: number): Promise<any> {
+  const { data, error } = await supabase
+    .from('user_settings')
+    .select('*')
+    .eq('user_id', userId)
+    .single()
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      // No settings exist, create default
+      return await createUserSettings(userId)
+    }
+    throw new Error(`Failed to get user settings: ${error.message}`)
+  }
+
+  return {
+    userId: data.user_id,
+    googleDriveConnected: data.google_drive_connected,
+    googleDriveToken: data.google_drive_token,
+    googleDriveRefreshToken: data.google_drive_refresh_token,
+    googleDriveFolderId: data.google_drive_folder_id,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at
+  }
+}
+
+export async function createUserSettings(userId: number): Promise<any> {
+  const { data, error } = await supabase
+    .from('user_settings')
+    .insert({
+      user_id: userId,
+      google_drive_connected: false,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    })
+    .select()
+    .single()
+
+  if (error) {
+    throw new Error(`Failed to create user settings: ${error.message}`)
+  }
+
+  return {
+    userId: data.user_id,
+    googleDriveConnected: data.google_drive_connected,
+    googleDriveToken: data.google_drive_token,
+    googleDriveRefreshToken: data.google_drive_refresh_token,
+    googleDriveFolderId: data.google_drive_folder_id,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at
+  }
+}
+
+export async function updateUserSettings(userId: number, settings: {
+  googleDriveConnected?: boolean,
+  googleDriveToken?: string,
+  googleDriveRefreshToken?: string,
+  googleDriveFolderId?: string
+}): Promise<void> {
+  const updateData: any = {
+    updated_at: new Date().toISOString()
+  }
+
+  if (settings.googleDriveConnected !== undefined) updateData.google_drive_connected = settings.googleDriveConnected
+  if (settings.googleDriveToken !== undefined) updateData.google_drive_token = settings.googleDriveToken
+  if (settings.googleDriveRefreshToken !== undefined) updateData.google_drive_refresh_token = settings.googleDriveRefreshToken
+  if (settings.googleDriveFolderId !== undefined) updateData.google_drive_folder_id = settings.googleDriveFolderId
+
+  const { error } = await supabase
+    .from('user_settings')
+    .update(updateData)
+    .eq('user_id', userId)
+
+  if (error) {
+    throw new Error(`Failed to update user settings: ${error.message}`)
+  }
+}
+
 // Initialize default super admin if it doesn't exist
 export async function initializeDefaultSuperAdmin(): Promise<void> {
   try {

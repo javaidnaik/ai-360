@@ -103,17 +103,52 @@ const MainApp: React.FC = () => {
 
   // Check Google Drive authentication status on load
   useEffect(() => {
-    setIsDriveAuthenticated(googleDriveService.isUserAuthenticated());
-  }, []);
+    const checkDriveAuth = async () => {
+      if (user) {
+        try {
+          const userSettings = await db.getUserSettings(user.id);
+          setIsDriveAuthenticated(userSettings.googleDriveConnected);
+        } catch (error) {
+          console.error('Failed to load Google Drive settings:', error);
+          setIsDriveAuthenticated(googleDriveService.isUserAuthenticated());
+        }
+      } else {
+        setIsDriveAuthenticated(googleDriveService.isUserAuthenticated());
+      }
+    };
+    checkDriveAuth();
+  }, [user]);
 
-  const handleDriveAuthSuccess = () => {
+  const handleDriveAuthSuccess = async () => {
     setIsDriveAuthenticated(true);
     setDriveAuthError(null);
+    
+    // Save Google Drive connection status to database
+    if (user) {
+      try {
+        await db.updateUserSettings(user.id, {
+          googleDriveConnected: true
+        });
+      } catch (error) {
+        console.error('Failed to save Google Drive connection status:', error);
+      }
+    }
   };
 
-  const handleDriveAuthError = (error: string) => {
+  const handleDriveAuthError = async (error: string) => {
     setDriveAuthError(error);
     setIsDriveAuthenticated(false);
+    
+    // Update database to reflect disconnected status
+    if (user) {
+      try {
+        await db.updateUserSettings(user.id, {
+          googleDriveConnected: false
+        });
+      } catch (dbError) {
+        console.error('Failed to update Google Drive connection status:', dbError);
+      }
+    }
   };
 
   const handleFilesSelect = useCallback((files: FileList) => {

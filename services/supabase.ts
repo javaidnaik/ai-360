@@ -7,20 +7,9 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
 
-// Debug logging to help identify configuration issues
-console.log('Supabase URL:', supabaseUrl)
-console.log('Supabase Anon Key exists:', !!supabaseAnonKey)
-
+// Validate configuration
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('❌ Supabase configuration missing!')
-  console.error('VITE_SUPABASE_URL:', supabaseUrl)
-  console.error('VITE_SUPABASE_ANON_KEY exists:', !!supabaseAnonKey)
-  console.error('Make sure your .env.local file has the correct variables')
-}
-
-if (supabaseUrl && !supabaseUrl.startsWith('https://')) {
-  console.error('❌ Invalid Supabase URL format:', supabaseUrl)
-  console.error('URL should start with https:// not postgres://')
+  console.error('❌ Supabase configuration missing! Check your .env.local file')
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)

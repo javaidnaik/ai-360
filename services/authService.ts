@@ -124,13 +124,13 @@ export class AuthService {
         return { success: false, message: 'Invalid email or password' };
       }
 
-      const isPasswordValid = comparePassword(credentials.password, user.passwordHash);
-      if (!isPasswordValid) {
+      // Validate password using Supabase function
+      const validUser = await db.validateUser(credentials.email, credentials.password);
+      if (!validUser) {
         return { success: false, message: 'Invalid email or password' };
       }
 
-      // Update last login
-      await db.updateUserLastLogin(user.id);
+      // Update last login is handled in validateUser function
 
       // Generate token
       const token = createToken({ userId: user.id });
