@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@google/genai": "^1.10.0",
+    "@libsql/client": "^0.15.14",
+    "@supabase/supabase-js": "^2.56.1",
     "@types/react-router-dom": "^5.3.3",
     "crypto-js": "^4.2.0",
     "react": "^19.1.0",

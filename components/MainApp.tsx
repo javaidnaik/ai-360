@@ -5,7 +5,7 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { generate360Video } from '../services/geminiService';
-import * as db from '../services/db';
+import * as db from '../services/supabaseDb';
 import { useAuth } from '../contexts/AuthContext';
 import Header from './Header';
 import Spinner from './Spinner';
@@ -70,18 +70,26 @@ const MainApp: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   useEffect(() => {
-    // Load user's videos from DB on initial load
-    const fetchVideos = async () => {
-      if (user) {
-        const userVideos = await db.getVideosByUserId(user.id);
-        setGalleryVideos(userVideos);
-      } else {
-        // For backward compatibility, load all videos if no user
-        const videos = await db.getAllVideos();
-        setGalleryVideos(videos);
+    // Initialize default super admin and load user's videos from DB on initial load
+    const initializeAndFetchVideos = async () => {
+      try {
+        // Initialize default super admin
+        await db.initializeDefaultSuperAdmin();
+        
+        // Load videos
+        if (user) {
+          const userVideos = await db.getVideosByUserId(user.id);
+          setGalleryVideos(userVideos);
+        } else {
+          // For backward compatibility, load all videos if no user
+          const videos = await db.getAllVideos();
+          setGalleryVideos(videos);
+        }
+      } catch (error) {
+        console.error('Error initializing app:', error);
       }
     };
-    fetchVideos();
+    initializeAndFetchVideos();
   }, [user]);
 
   // Update view based on user login state

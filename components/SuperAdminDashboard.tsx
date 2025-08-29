@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { User, UserAnalytics, AIModelConfig } from '../types';
-import * as db from '../services/db';
+import * as db from '../services/supabaseDb';
 
 const SuperAdminDashboard: React.FC = () => {
   const { user, logout } = useAuth();
