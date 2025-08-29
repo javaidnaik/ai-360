@@ -49,31 +49,31 @@ const StartScreen: React.FC<StartScreenProps> = ({ onFilesSelect, onShowGallery,
   const features = [
     {
       icon: SparklesIcon,
-      title: "Gemini AI Integration",
-      description: "Leverages Google's advanced Gemini AI to transform static images into dynamic 360° video content"
+      title: "Smart AI Processing",
+      description: "Advanced artificial intelligence transforms your static images into dynamic 360° video experiences"
     },
     {
       icon: LightningIcon,
-      title: "Efficient Processing",
-      description: "Streamlined workflow for our team to create professional video content quickly and consistently"
+      title: "Fast Generation",
+      description: "Create professional-quality videos in minutes with streamlined processing and optimization"
     },
     {
       icon: ShieldIcon,
-      title: "Secure Internal Tool",
-      description: "Built for our organization's content creation needs with secure processing and user authentication"
+      title: "Secure & Private",
+      description: "Your images are processed securely with user authentication and privacy protection"
     },
     {
       icon: PlayIcon,
-      title: "Professional Output",
-      description: "Generate high-quality 360° videos suitable for marketing, presentations, and product showcases"
+      title: "Professional Quality",
+      description: "Export high-resolution 360° videos perfect for presentations, marketing, and showcases"
     }
   ];
 
   const useCases = [
     { title: "Marketing Content", description: "Create engaging visuals for campaigns" },
-    { title: "Product Demos", description: "Showcase products from every angle" },
-    { title: "Training Materials", description: "Interactive content for internal training" },
-    { title: "Presentations", description: "Professional content for client meetings" }
+    { title: "Product Showcases", description: "Display products from every angle" },
+    { title: "Creative Projects", description: "Bring artistic visions to life" },
+    { title: "Presentations", description: "Professional content for meetings" }
   ];
 
   return (
@@ -105,8 +105,8 @@ const StartScreen: React.FC<StartScreenProps> = ({ onFilesSelect, onShowGallery,
 
           {/* Subtitle */}
           <p className="max-w-2xl text-xl text-gray-300 md:text-2xl mt-4 leading-relaxed">
-            Internal tool for creating <span className="text-purple-400 font-semibold">professional 360° videos</span> using Google's Gemini AI. 
-            Designed for our team's content creation needs.
+            Transform your photos into <span className="text-purple-400 font-semibold">cinematic 360° experiences</span> with advanced AI technology. 
+            Professional video creation made simple.
           </p>
 
           {/* CTA Section */}
@@ -120,23 +120,23 @@ const StartScreen: React.FC<StartScreenProps> = ({ onFilesSelect, onShowGallery,
             
             <div className="flex items-center gap-2 text-gray-400">
               <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
-              <p className="text-sm">Drag & drop up to 4 images • Powered by Gemini AI • For internal team use</p>
+              <p className="text-sm">Drag & drop up to 4 images • AI-enhanced processing • High-quality output</p>
             </div>
           </div>
 
           {/* Quick Stats */}
           <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-2xl">
             <div className="text-center">
-              <div className="text-3xl font-bold text-blue-400">AI</div>
-              <div className="text-sm text-gray-400">Powered Generation</div>
+              <div className="text-3xl font-bold text-blue-400">Smart</div>
+              <div className="text-sm text-gray-400">AI Processing</div>
             </div>
             <div className="text-center">
               <div className="text-3xl font-bold text-purple-400">360°</div>
               <div className="text-sm text-gray-400">Immersive Videos</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-green-400">HD</div>
-              <div className="text-sm text-gray-400">Quality Output</div>
+              <div className="text-3xl font-bold text-green-400">Pro</div>
+              <div className="text-sm text-gray-400">Quality Results</div>
             </div>
           </div>
 
@@ -157,9 +157,9 @@ const StartScreen: React.FC<StartScreenProps> = ({ onFilesSelect, onShowGallery,
       <div className="w-full py-20 px-8">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-100 mb-4">Internal Video Creation Tool</h2>
+            <h2 className="text-4xl font-bold text-gray-100 mb-4">Why Choose Pixshop?</h2>
             <p className="text-xl text-gray-400 max-w-2xl mx-auto">
-              Streamline our team's 360° video production with Google's Gemini AI technology
+              Advanced 360° video creation with cutting-edge AI technology and professional results
             </p>
           </div>
 
@@ -183,8 +183,8 @@ const StartScreen: React.FC<StartScreenProps> = ({ onFilesSelect, onShowGallery,
       <div className="w-full py-20 px-8 bg-black/10">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-100 mb-4">Team Use Cases</h2>
-            <p className="text-xl text-gray-400">How our organization can leverage 360° video content</p>
+            <h2 className="text-4xl font-bold text-gray-100 mb-4">Perfect For Every Project</h2>
+            <p className="text-xl text-gray-400">Versatile 360° video creation for various creative and business needs</p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -204,7 +204,7 @@ const StartScreen: React.FC<StartScreenProps> = ({ onFilesSelect, onShowGallery,
           <h2 className="text-4xl font-bold text-gray-100 mb-6">Ready to Create Content?</h2>
           <p className="text-xl text-gray-400 mb-10 max-w-2xl mx-auto">
             Start creating professional 360° videos for your projects. 
-            Upload your images and let Gemini AI do the work.
+            Upload your images and let AI technology do the work.
           </p>
           
           <label htmlFor="image-upload-bottom" className="inline-flex items-center justify-center px-10 py-5 text-xl font-bold text-white bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl cursor-pointer hover:from-purple-500 hover:to-pink-500 transition-all duration-300 shadow-lg shadow-purple-600/30 hover:shadow-xl hover:shadow-purple-500/40 hover:-translate-y-1 transform">
