@@ -102,7 +102,7 @@ export async function validateUser(email: string, password: string): Promise<Use
 
   if (error) return null
 
-  const passwordHash = CryptoJS.SHA256(password).toString()
+  const passwordHash = CryptoJS.SHA256(password + JWT_SECRET).toString()
   if (data.password_hash !== passwordHash) return null
 
   // Update last login
