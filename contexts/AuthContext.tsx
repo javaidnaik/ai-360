@@ -50,13 +50,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = async (credentials: LoginCredentials) => {
     const result = await authService.login(credentials);
     if (result.success) {
-      const newAuthState = authService.getAuthState();
-      setAuthState(newAuthState);
-      
-      // Set cookie for server-side identification
-      if (newAuthState.user?.role === 'superadmin') {
-        document.cookie = `user-role=superadmin; path=/; max-age=${7 * 24 * 60 * 60}`; // 7 days
-      }
+      setAuthState(authService.getAuthState());
     }
     return { success: result.success, message: result.message };
   };
@@ -72,9 +66,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const logout = () => {
     authService.logout();
     setAuthState(authService.getAuthState());
-    
-    // Clear cookies
-    document.cookie = 'user-role=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
   };
 
   const isSuperAdmin = () => {

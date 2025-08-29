@@ -1,7 +1,4 @@
 {
-  "env": {
-    "SITE_ACCESS_ENABLED": "false"
-  },
   "rewrites": [
     {
       "source": "/(.*)",

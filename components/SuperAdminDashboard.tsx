@@ -10,12 +10,11 @@ import * as db from '../services/db';
 
 const SuperAdminDashboard: React.FC = () => {
   const { user, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState<'analytics' | 'users' | 'models' | 'settings'>('analytics');
+  const [activeTab, setActiveTab] = useState<'analytics' | 'users' | 'models'>('analytics');
   const [analytics, setAnalytics] = useState<UserAnalytics | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [models, setModels] = useState<AIModelConfig[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [siteAccessEnabled, setSiteAccessEnabled] = useState(true);
   const [newModel, setNewModel] = useState({
     name: '',
     modelId: '',
@@ -30,17 +29,15 @@ const SuperAdminDashboard: React.FC = () => {
   const loadData = async () => {
     try {
       setIsLoading(true);
-      const [analyticsData, usersData, modelsData, siteAccess] = await Promise.all([
+      const [analyticsData, usersData, modelsData] = await Promise.all([
         db.getUserAnalytics(),
         db.getAllUsers(),
-        db.getAllAIModels(),
-        db.isSiteAccessEnabled()
+        db.getAllAIModels()
       ]);
       
       setAnalytics(analyticsData);
       setUsers(usersData);
       setModels(modelsData);
-      setSiteAccessEnabled(siteAccess);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
     } finally {
@@ -100,39 +97,6 @@ const SuperAdminDashboard: React.FC = () => {
     }
   };
 
-  const handleToggleSiteAccess = async () => {
-    try {
-      const newState = !siteAccessEnabled;
-      
-      // Use the Vercel API endpoint
-      const response = await fetch('/api/site-access', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-role': 'superadmin'
-        },
-        body: JSON.stringify({ enabled: newState })
-      });
-      
-      const result = await response.json();
-      
-      if (response.ok) {
-        setSiteAccessEnabled(newState);
-        
-        if (newState) {
-          alert('Site access has been ENABLED. All users can now access the site.');
-        } else {
-          alert('Site access has been DISABLED. Only super admins can access the site.\n\nNote: For full server-side protection, update the SITE_ACCESS_ENABLED environment variable in your Vercel dashboard.');
-        }
-      } else {
-        throw new Error(result.error || 'Failed to update site access');
-      }
-    } catch (error) {
-      console.error('Error toggling site access:', error);
-      alert('Failed to update site access setting: ' + error.message);
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900 flex items-center justify-center">
@@ -174,8 +138,7 @@ const SuperAdminDashboard: React.FC = () => {
           {[
             { id: 'analytics', label: 'Analytics' },
             { id: 'users', label: 'Users' },
-            { id: 'models', label: 'AI Models' },
-            { id: 'settings', label: 'Settings' }
+            { id: 'models', label: 'AI Models' }
           ].map((tab) => (
             <button
               key={tab.id}
@@ -380,66 +343,6 @@ const SuperAdminDashboard: React.FC = () => {
                   </tbody>
                 </table>
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* Settings Tab */}
-        {activeTab === 'settings' && (
-          <div className="space-y-6">
-            {/* Site Access Control */}
-            <div className="bg-black/20 backdrop-blur-sm border border-gray-700/50 rounded-lg p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-xl font-semibold text-white mb-2">Site Access Control</h3>
-                  <p className="text-gray-400 mb-4">
-                    Control whether regular users can access the site. When disabled, only super admins can access the application.
-                  </p>
-                  <div className="flex items-center gap-3">
-                    <span className={`text-sm font-medium ${siteAccessEnabled ? 'text-green-400' : 'text-red-400'}`}>
-                      Status: {siteAccessEnabled ? 'ENABLED - Users can access the site' : 'DISABLED - Site restricted to super admins only'}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex flex-col items-center gap-4">
-                  <button
-                    onClick={handleToggleSiteAccess}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
-                      siteAccessEnabled ? 'bg-green-600' : 'bg-red-600'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        siteAccessEnabled ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                  <span className="text-xs text-gray-400 text-center">
-                    {siteAccessEnabled ? 'Click to disable' : 'Click to enable'}
-                  </span>
-                </div>
-              </div>
-              
-              {!siteAccessEnabled && (
-                <div className="mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    <svg className="w-5 h-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                    <span className="text-red-300 font-medium">Warning: Site Access Disabled</span>
-                  </div>
-                  <p className="text-red-200 text-sm mt-2">
-                    Regular users will see a maintenance page and cannot access the application. 
-                    Only super admin accounts can bypass this restriction.
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Additional Settings Placeholder */}
-            <div className="bg-black/20 backdrop-blur-sm border border-gray-700/50 rounded-lg p-6">
-              <h3 className="text-xl font-semibold text-white mb-2">Additional Settings</h3>
-              <p className="text-gray-400">More administrative settings will be available here in future updates.</p>
             </div>
           </div>
         )}
