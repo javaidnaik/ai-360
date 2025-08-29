@@ -16,47 +16,46 @@ import { VideoCreation } from '../types';
 type View = 'start' | 'editor' | 'loading' | 'result' | 'gallery' | 'error';
 const MAX_IMAGES = 4;
 
-// Helper to combine images into a horizontal strip
-const combineImages = (imageFiles: File[]): Promise<File> => {
+// Helper to process the primary image for 360° video generation
+const processImageForGeneration = (imageFiles: File[]): Promise<File> => {
   return new Promise(async (resolve, reject) => {
-    const images = await Promise.all(
-      imageFiles.map(file => {
-        return new Promise<HTMLImageElement>((resolveImg, rejectImg) => {
-          const img = new Image();
-          img.onload = () => resolveImg(img);
-          img.onerror = rejectImg;
-          img.src = URL.createObjectURL(file);
-        });
-      })
-    );
+    // For 360° video generation, we use the first/primary image
+    // Multiple images are for user reference/selection, but AI works best with single image
+    const primaryImage = imageFiles[0];
+    
+    if (!primaryImage) {
+      return reject(new Error('No image provided for processing.'));
+    }
 
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return reject(new Error('Could not create canvas context.'));
-    
-    const totalWidth = images.reduce((sum, img) => sum + img.width, 0);
-    const maxHeight = Math.max(...images.map(img => img.height));
-    
-    canvas.width = totalWidth;
-    canvas.height = maxHeight;
-    
-    let currentX = 0;
-    images.forEach(img => {
-      ctx.drawImage(img, currentX, 0);
-      currentX += img.width;
+    // Load and potentially optimize the primary image
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return reject(new Error('Could not create canvas context.'));
+      
+      // Use original dimensions for best quality
+      canvas.width = img.width;
+      canvas.height = img.height;
+      
+      // Draw the primary image
+      ctx.drawImage(img, 0, 0);
       URL.revokeObjectURL(img.src);
-    });
+      
+      canvas.toBlob(blob => {
+        if (!blob) return reject(new Error('Canvas to Blob conversion failed.'));
+        resolve(new File([blob], 'primary-image.png', { type: 'image/png' }));
+      }, 'image/png');
+    };
     
-    canvas.toBlob(blob => {
-      if (!blob) return reject(new Error('Canvas to Blob conversion failed.'));
-      resolve(new File([blob], 'combined-image.png', { type: 'image/png' }));
-    }, 'image/png');
+    img.onerror = () => reject(new Error('Failed to load image.'));
+    img.src = URL.createObjectURL(primaryImage);
   });
 };
 
 const MainApp: React.FC = () => {
   const { user } = useAuth();
-  const [view, setView] = useState<View>('start');
+  const [view, setView] = useState<View>(user ? 'editor' : 'start');
   const [images, setImages] = useState<File[]>([]);
   const [prompt, setPrompt] = useState<string>('');
   const [animationStyle, setAnimationStyle] = useState<string>('Slow Spin');
@@ -80,6 +79,15 @@ const MainApp: React.FC = () => {
     };
     fetchVideos();
   }, [user]);
+
+  // Update view based on user login state
+  useEffect(() => {
+    if (user && view === 'start') {
+      setView('editor');
+    } else if (!user && (view === 'editor' || view === 'gallery')) {
+      setView('start');
+    }
+  }, [user, view]);
 
   const handleFilesSelect = useCallback((files: FileList) => {
     const newImages = Array.from(files).slice(0, MAX_IMAGES - images.length);
@@ -121,8 +129,8 @@ const MainApp: React.FC = () => {
     const finalPrompt = `${animationPrompt} ${prompt}`.trim();
     
     try {
-      const combinedImageFile = await combineImages(images);
-      const generatedBlob = await generate360Video(combinedImageFile, finalPrompt, setLoadingMessage);
+      const processedImageFile = await processImageForGeneration(images);
+      const generatedBlob = await generate360Video(processedImageFile, finalPrompt, setLoadingMessage);
       
       const newCreation: Omit<VideoCreation, 'id' | 'url'> = {
         prompt: finalPrompt,

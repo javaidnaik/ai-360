@@ -4,7 +4,9 @@
 */
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { UploadIcon } from './icons';
+import { useAuth } from '../contexts/AuthContext';
 
 interface StartScreenProps {
   onFilesSelect: (files: FileList) => void;
@@ -39,11 +41,35 @@ const PlayIcon: React.FC<{ className?: string }> = ({ className }) => (
 
 const StartScreen: React.FC<StartScreenProps> = ({ onFilesSelect, onShowGallery, hasCreations }) => {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!isAuthenticated) {
+      navigate('/auth');
+      return;
+    }
     if (e.target.files) {
       onFilesSelect(e.target.files);
     }
+  };
+
+  const handleUploadClick = () => {
+    if (!isAuthenticated) {
+      navigate('/auth');
+      return;
+    }
+    // If authenticated, the label will trigger the file input
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingOver(false);
+    if (!isAuthenticated) {
+      navigate('/auth');
+      return;
+    }
+    onFilesSelect(e.dataTransfer.files);
   };
 
   const features = [
@@ -83,11 +109,7 @@ const StartScreen: React.FC<StartScreenProps> = ({ onFilesSelect, onShowGallery,
         className={`w-full flex flex-col items-center justify-center text-center p-8 min-h-screen transition-all duration-300 ${isDraggingOver ? 'bg-blue-500/10' : ''}`}
         onDragOver={(e) => { e.preventDefault(); setIsDraggingOver(true); }}
         onDragLeave={() => setIsDraggingOver(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setIsDraggingOver(false);
-          onFilesSelect(e.dataTransfer.files);
-        }}
+        onDrop={handleDrop}
       >
         <div className="flex flex-col items-center gap-6 animate-fade-in max-w-4xl">
           {/* Main Headline */}
@@ -111,16 +133,32 @@ const StartScreen: React.FC<StartScreenProps> = ({ onFilesSelect, onShowGallery,
 
           {/* CTA Section */}
           <div className="mt-10 flex flex-col items-center gap-6">
-            <label htmlFor="image-upload-start" className="relative inline-flex items-center justify-center px-12 py-6 text-xl font-bold text-white bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl cursor-pointer group hover:from-blue-500 hover:to-purple-500 transition-all duration-300 shadow-lg shadow-purple-600/30 hover:shadow-xl hover:shadow-purple-500/40 hover:-translate-y-1 transform">
-              <UploadIcon className="w-7 h-7 mr-4" />
-              Start Creating
-              <div className="absolute inset-0 bg-white/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            </label>
+            {isAuthenticated ? (
+              <label htmlFor="image-upload-start" className="relative inline-flex items-center justify-center px-12 py-6 text-xl font-bold text-white bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl cursor-pointer group hover:from-blue-500 hover:to-purple-500 transition-all duration-300 shadow-lg shadow-purple-600/30 hover:shadow-xl hover:shadow-purple-500/40 hover:-translate-y-1 transform">
+                <UploadIcon className="w-7 h-7 mr-4" />
+                Start Creating
+                <div className="absolute inset-0 bg-white/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              </label>
+            ) : (
+              <button 
+                onClick={handleUploadClick}
+                className="relative inline-flex items-center justify-center px-12 py-6 text-xl font-bold text-white bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl cursor-pointer group hover:from-blue-500 hover:to-purple-500 transition-all duration-300 shadow-lg shadow-purple-600/30 hover:shadow-xl hover:shadow-purple-500/40 hover:-translate-y-1 transform"
+              >
+                <UploadIcon className="w-7 h-7 mr-4" />
+                Login to Start Creating
+                <div className="absolute inset-0 bg-white/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              </button>
+            )}
             <input id="image-upload-start" type="file" className="hidden" accept="image/*" onChange={handleFileChange} multiple />
             
             <div className="flex items-center gap-2 text-gray-400">
               <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
-              <p className="text-sm">Drag & drop up to 4 images • AI-enhanced processing • High-quality output</p>
+              <p className="text-sm">
+                {isAuthenticated 
+                  ? "Drag & drop up to 4 images • AI-enhanced processing • High-quality output"
+                  : "Login required to create videos • Secure authentication • Personal gallery"
+                }
+              </p>
             </div>
           </div>
 
@@ -207,10 +245,20 @@ const StartScreen: React.FC<StartScreenProps> = ({ onFilesSelect, onShowGallery,
             Upload your images and let AI technology do the work.
           </p>
           
-          <label htmlFor="image-upload-bottom" className="inline-flex items-center justify-center px-10 py-5 text-xl font-bold text-white bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl cursor-pointer hover:from-purple-500 hover:to-pink-500 transition-all duration-300 shadow-lg shadow-purple-600/30 hover:shadow-xl hover:shadow-purple-500/40 hover:-translate-y-1 transform">
-            <UploadIcon className="w-6 h-6 mr-3" />
-            Start Creating
-          </label>
+{isAuthenticated ? (
+            <label htmlFor="image-upload-bottom" className="inline-flex items-center justify-center px-10 py-5 text-xl font-bold text-white bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl cursor-pointer hover:from-purple-500 hover:to-pink-500 transition-all duration-300 shadow-lg shadow-purple-600/30 hover:shadow-xl hover:shadow-purple-500/40 hover:-translate-y-1 transform">
+              <UploadIcon className="w-6 h-6 mr-3" />
+              Start Creating
+            </label>
+          ) : (
+            <button 
+              onClick={handleUploadClick}
+              className="inline-flex items-center justify-center px-10 py-5 text-xl font-bold text-white bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl cursor-pointer hover:from-purple-500 hover:to-pink-500 transition-all duration-300 shadow-lg shadow-purple-600/30 hover:shadow-xl hover:shadow-purple-500/40 hover:-translate-y-1 transform"
+            >
+              <UploadIcon className="w-6 h-6 mr-3" />
+              Login to Get Started
+            </button>
+          )}
           <input id="image-upload-bottom" type="file" className="hidden" accept="image/*" onChange={handleFileChange} multiple />
         </div>
       </div>
