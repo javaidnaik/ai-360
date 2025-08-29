@@ -32,7 +32,7 @@ const AppRoutes: React.FC = () => {
     };
 
     checkSiteAccess();
-  }, []);
+  }, [user]); // Re-check when user changes
 
   // Show loading while checking site access
   if (isLoadingSiteAccess) {

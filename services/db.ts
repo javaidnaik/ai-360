@@ -32,6 +32,7 @@ function initDB(): Promise<IDBDatabase> {
 
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;
+      const transaction = (event.target as IDBOpenDBRequest).transaction;
       
       // Create videos store
       if (!db.objectStoreNames.contains(STORE_NAME)) {
@@ -57,11 +58,9 @@ function initDB(): Promise<IDBDatabase> {
       // Create settings store
       if (!db.objectStoreNames.contains(SETTINGS_STORE_NAME)) {
         const settingsStore = db.createObjectStore(SETTINGS_STORE_NAME, { keyPath: 'key' });
-        // Initialize default settings
-        const transaction = (event.target as IDBOpenDBRequest).transaction;
+        // Initialize default settings in the upgrade transaction
         if (transaction) {
-          const store = transaction.objectStore(SETTINGS_STORE_NAME);
-          store.add({ key: 'siteAccessEnabled', value: true, updatedAt: Date.now() });
+          settingsStore.add({ key: 'siteAccessEnabled', value: true, updatedAt: Date.now() });
         }
       }
     };
@@ -384,7 +383,12 @@ export async function setSetting(key: string, value: any): Promise<void> {
 export async function isSiteAccessEnabled(): Promise<boolean> {
     try {
         const enabled = await getSetting('siteAccessEnabled');
-        return enabled !== null ? enabled : true; // Default to enabled if not set
+        if (enabled === null) {
+            // Setting doesn't exist, create it with default value
+            await setSetting('siteAccessEnabled', true);
+            return true;
+        }
+        return enabled;
     } catch (error) {
         console.error('Error checking site access:', error);
         return true; // Default to enabled on error
