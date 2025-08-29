@@ -12,32 +12,65 @@ const SparkleIcon: React.FC<{ className?: string }> = ({ className }) => (
 );
 
 interface HeaderProps {
-    onShowGallery: () => void;
+    onShowGallery?: () => void;
+    onBackToStart?: () => void;
+    onShowEditor?: () => void;
     hasCreations: boolean;
+    currentView?: 'start' | 'editor' | 'gallery' | 'creations';
 }
 
-const Header: React.FC<HeaderProps> = ({ onShowGallery, hasCreations }) => {
+const Header: React.FC<HeaderProps> = ({ 
+  onShowGallery, 
+  onBackToStart, 
+  onShowEditor, 
+  hasCreations, 
+  currentView = 'start' 
+}) => {
   const { user, logout, isSuperAdmin } = useAuth();
 
   return (
     <header className="w-full py-6 flex items-center justify-between">
       <div className="flex items-center gap-3">
+        <button 
+          onClick={onBackToStart}
+          className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer"
+        >
           <SparkleIcon className="w-6 h-6 text-blue-400" />
           <h1 className="text-xl font-bold tracking-tight text-gray-100">
             Pixshop
           </h1>
+        </button>
       </div>
-      
-      <div className="flex items-center gap-4">
-        {hasCreations && (
-          <button 
-              onClick={onShowGallery}
-              className="bg-white/5 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-white/10 transition"
+
+      {/* Navigation Links */}
+      <nav className="flex items-center gap-4">
+        {currentView !== 'start' && (
+          <button
+            onClick={onBackToStart}
+            className="px-4 py-2 text-gray-300 hover:text-white transition-colors"
           >
-              My Creations
+            Home
           </button>
         )}
-        
+        {currentView !== 'editor' && (
+          <button
+            onClick={onShowEditor}
+            className="px-4 py-2 text-gray-300 hover:text-white transition-colors"
+          >
+            Create
+          </button>
+        )}
+        {hasCreations && currentView !== 'creations' && (
+          <button
+            onClick={onShowGallery}
+            className="px-4 py-2 text-gray-300 hover:text-white transition-colors"
+          >
+            My Creations
+          </button>
+        )}
+      </nav>
+      
+      <div className="flex items-center gap-4">
         {user && (
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-300">

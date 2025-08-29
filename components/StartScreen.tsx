@@ -7,11 +7,17 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { UploadIcon } from './icons';
 import { useAuth } from '../contexts/AuthContext';
+import Header from './Header';
 
 interface StartScreenProps {
   onFilesSelect: (files: FileList) => void;
   onShowGallery: () => void;
   hasCreations: boolean;
+}
+
+// Add navigation handlers
+interface StartScreenPropsExtended extends StartScreenProps {
+  onShowEditor?: () => void;
 }
 
 // Feature icons
@@ -104,6 +110,15 @@ const StartScreen: React.FC<StartScreenProps> = ({ onFilesSelect, onShowGallery,
 
   return (
     <div className="w-full min-h-screen">
+      {/* Header */}
+      <div className="w-full max-w-6xl mx-auto p-6">
+        <Header 
+          onShowGallery={onShowGallery}
+          hasCreations={hasCreations}
+          currentView="start"
+        />
+      </div>
+      
       {/* Hero Section */}
       <div 
         className={`w-full flex flex-col items-center justify-center text-center p-8 min-h-screen transition-all duration-300 ${isDraggingOver ? 'bg-blue-500/10' : ''}`}

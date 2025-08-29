@@ -10,12 +10,13 @@ import { useAuth } from '../contexts/AuthContext';
 import Header from './Header';
 import Spinner from './Spinner';
 import StartScreen from './StartScreen';
+import MyCreations from './MyCreations';
 import GoogleDriveAuth from './GoogleDriveAuth';
 import { AddIcon, TrashIcon, VideoIcon, DownloadIcon } from './icons';
 import { VideoCreation } from '../types';
 import { googleDriveService } from '../services/googleDriveService';
 
-type View = 'start' | 'editor' | 'loading' | 'result' | 'gallery' | 'error';
+type View = 'start' | 'editor' | 'loading' | 'result' | 'gallery' | 'error' | 'creations';
 const MAX_IMAGES = 1;
 
 // Helper to process the primary image for 360° video generation
@@ -299,6 +300,21 @@ const MainApp: React.FC = () => {
     setGalleryVideos(updatedVideos);
   };
 
+  const handleShowCreations = () => {
+    setView('creations');
+  };
+
+  const handleBackToStart = () => {
+    setView('start');
+    setImages([]);
+    setGeneratedVideo(null);
+    setErrorMessage('');
+  };
+
+  const handleShowEditor = () => {
+    setView('editor');
+  };
+
   const handleReset = useCallback(() => {
     setImages([]);
     setPrompt('');
@@ -321,12 +337,18 @@ const MainApp: React.FC = () => {
   const renderContent = () => {
     switch (view) {
       case 'start':
-        return <StartScreen onFilesSelect={handleFilesSelect} onShowGallery={() => setView('gallery')} hasCreations={galleryVideos.length > 0} />;
+        return <StartScreen onFilesSelect={handleFilesSelect} onShowGallery={handleShowCreations} hasCreations={galleryVideos.length > 0} />;
       
       case 'editor':
         return (
           <div className="w-full max-w-4xl mx-auto flex flex-col items-center gap-8 animate-fade-in p-4">
-            <Header onShowGallery={() => setView('gallery')} hasCreations={galleryVideos.length > 0}/>
+            <Header 
+              onShowGallery={handleShowCreations}
+              onBackToStart={handleBackToStart}
+              onShowEditor={handleShowEditor}
+              hasCreations={galleryVideos.length > 0}
+              currentView="editor"
+            />
             
             {/* Google Drive Authentication */}
             <GoogleDriveAuth 
@@ -465,16 +487,25 @@ const MainApp: React.FC = () => {
                   Download Video
               </a>
             </div>
-             <button onClick={() => setView('gallery')} className="text-gray-400 hover:text-white transition mt-4">
+             <button onClick={handleShowCreations} className="text-gray-400 hover:text-white transition mt-4">
                 View All Creations
               </button>
           </div>
         );
       
+      case 'creations':
+        return <MyCreations onBackToStart={handleBackToStart} />;
+
       case 'gallery':
         return (
            <div className="w-full max-w-6xl mx-auto flex flex-col items-center gap-8 animate-fade-in p-4">
-             <Header onShowGallery={() => setView('gallery')} hasCreations={galleryVideos.length > 0} />
+             <Header 
+               onShowGallery={handleShowCreations}
+               onBackToStart={handleBackToStart}
+               onShowEditor={handleShowEditor}
+               hasCreations={galleryVideos.length > 0}
+               currentView="gallery"
+             />
              <h2 className="text-4xl font-bold text-gray-100">My Creations</h2>
              {galleryVideos.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
