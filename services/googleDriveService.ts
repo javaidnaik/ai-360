@@ -47,7 +47,7 @@ export class GoogleDriveService {
       await this.loadGoogleAPI();
       await this.loadGoogleIdentityServices();
       
-      // Initialize the Google API client
+      // Initialize the Google API client (without discovery docs to avoid 502 errors)
       await new Promise<void>((resolve, reject) => {
         gapi.load('client', {
           callback: resolve,
@@ -56,8 +56,7 @@ export class GoogleDriveService {
       });
 
       await gapi.client.init({
-        apiKey: API_KEY,
-        discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest']
+        apiKey: API_KEY
       });
 
       // Use Google Identity Services for authentication
@@ -168,40 +167,51 @@ export class GoogleDriveService {
         base64Data +
         close_delim;
 
-      const request = gapi.client.request({
-        path: 'https://www.googleapis.com/upload/drive/v3/files',
-        method: 'POST',
-        params: { uploadType: 'multipart' },
-        headers: {
-          'Content-Type': 'multipart/related; boundary="' + boundary + '"'
-        },
-        body: body
-      });
+             // Upload using direct fetch API
+       const uploadResponse = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+         method: 'POST',
+         headers: {
+           'Authorization': `Bearer ${gapi.client.getToken().access_token}`,
+           'Content-Type': 'multipart/related; boundary="' + boundary + '"'
+         },
+         body: body
+       });
 
-      const response = await request;
-      
-      // Get the file details with sharing link
-      const fileDetails = await gapi.client.drive.files.get({
-        fileId: response.result.id,
-        fields: 'id,name,webViewLink,webContentLink,createdTime,size'
-      });
+       if (!uploadResponse.ok) {
+         throw new Error(`Upload failed: ${uploadResponse.status}`);
+       }
 
-      // Make the file shareable (view access to anyone with the link)
-      await gapi.client.drive.permissions.create({
-        fileId: response.result.id,
-        resource: {
-          role: 'reader',
-          type: 'anyone'
-        }
-      });
+       const uploadResult = await uploadResponse.json();
+       
+       // Get the file details with sharing link
+       const fileDetailsResponse = await fetch(`https://www.googleapis.com/drive/v3/files/${uploadResult.id}?fields=id,name,webViewLink,webContentLink,createdTime,size`, {
+         headers: {
+           'Authorization': `Bearer ${gapi.client.getToken().access_token}`
+         }
+       });
+
+       const fileDetails = await fileDetailsResponse.json();
+
+       // Make the file shareable (view access to anyone with the link)
+       await fetch(`https://www.googleapis.com/drive/v3/files/${uploadResult.id}/permissions`, {
+         method: 'POST',
+         headers: {
+           'Authorization': `Bearer ${gapi.client.getToken().access_token}`,
+           'Content-Type': 'application/json'
+         },
+         body: JSON.stringify({
+           role: 'reader',
+           type: 'anyone'
+         })
+       });
 
       return {
-        id: fileDetails.result.id!,
-        name: fileDetails.result.name!,
-        webViewLink: fileDetails.result.webViewLink,
-        webContentLink: fileDetails.result.webContentLink,
-        createdTime: fileDetails.result.createdTime,
-        size: fileDetails.result.size
+        id: fileDetails.id,
+        name: fileDetails.name,
+        webViewLink: fileDetails.webViewLink,
+        webContentLink: fileDetails.webContentLink,
+        createdTime: fileDetails.createdTime,
+        size: fileDetails.size
       };
     } catch (error) {
       console.error('Failed to upload video to Google Drive:', error);
@@ -214,25 +224,33 @@ export class GoogleDriveService {
    */
   private async getOrCreateFolder(folderName: string): Promise<string> {
     // Search for existing folder
-    const searchResponse = await gapi.client.drive.files.list({
-      q: `name='${folderName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
-      fields: 'files(id,name)'
+    const searchUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(`name='${folderName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`)}&fields=files(id,name)`;
+    const searchResponse = await fetch(searchUrl, {
+      headers: {
+        'Authorization': `Bearer ${gapi.client.getToken().access_token}`
+      }
     });
 
-    if (searchResponse.result.files && searchResponse.result.files.length > 0) {
-      return searchResponse.result.files[0].id!;
+    const searchResult = await searchResponse.json();
+    if (searchResult.files && searchResult.files.length > 0) {
+      return searchResult.files[0].id;
     }
 
     // Create new folder
-    const createResponse = await gapi.client.drive.files.create({
-      resource: {
+    const createResponse = await fetch('https://www.googleapis.com/drive/v3/files?fields=id', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${gapi.client.getToken().access_token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
         name: folderName,
         mimeType: 'application/vnd.google-apps.folder'
-      },
-      fields: 'id'
+      })
     });
 
-    return createResponse.result.id!;
+    const createResult = await createResponse.json();
+    return createResult.id;
   }
 
   /**
@@ -247,15 +265,17 @@ export class GoogleDriveService {
       const folderName = `Pixshop_Videos_User_${userId}`;
       const folderId = await this.getOrCreateFolder(folderName);
 
-      const response = await gapi.client.drive.files.list({
-        q: `'${folderId}' in parents and mimeType='video/mp4' and trashed=false`,
-        fields: 'files(id,name,webViewLink,webContentLink,createdTime,size)',
-        orderBy: 'createdTime desc'
+      const listUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(`'${folderId}' in parents and mimeType='video/mp4' and trashed=false`)}&fields=files(id,name,webViewLink,webContentLink,createdTime,size)&orderBy=createdTime desc`;
+      const response = await fetch(listUrl, {
+        headers: {
+          'Authorization': `Bearer ${gapi.client.getToken().access_token}`
+        }
       });
 
-      return response.result.files?.map(file => ({
-        id: file.id!,
-        name: file.name!,
+      const result = await response.json();
+      return result.files?.map((file: any) => ({
+        id: file.id,
+        name: file.name,
         webViewLink: file.webViewLink,
         webContentLink: file.webContentLink,
         createdTime: file.createdTime,
@@ -276,10 +296,13 @@ export class GoogleDriveService {
     }
 
     try {
-      await gapi.client.drive.files.delete({
-        fileId: fileId
+      const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${gapi.client.getToken().access_token}`
+        }
       });
-      return true;
+      return response.ok;
     } catch (error) {
       console.error('Failed to delete video:', error);
       return false;
