@@ -161,6 +161,42 @@ export class AuthService {
     localStorage.removeItem('auth_token');
   }
 
+  async forgotPassword(email: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const token = await db.createPasswordResetToken(email);
+      if (!token) {
+        return { success: false, message: 'No account found with this email address' };
+      }
+      
+      // In a real app, you would send an email with the reset link
+      // For demo purposes, we'll log the token
+      console.log('Password reset token:', token);
+      console.log('Reset link would be: /reset-password?token=' + token);
+      
+      return { 
+        success: true, 
+        message: 'Password reset instructions have been sent to your email (check console for demo)' 
+      };
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      return { success: false, message: 'Failed to process password reset request' };
+    }
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const success = await db.resetPassword(token, newPassword);
+      if (success) {
+        return { success: true, message: 'Password has been reset successfully' };
+      } else {
+        return { success: false, message: 'Invalid or expired reset token' };
+      }
+    } catch (error) {
+      console.error('Reset password error:', error);
+      return { success: false, message: 'Failed to reset password' };
+    }
+  }
+
   getAuthState(): AuthState {
     return { ...this.authState };
   }

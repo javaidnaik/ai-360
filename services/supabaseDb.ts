@@ -100,9 +100,12 @@ export async function getAllUsers(): Promise<User[]> {
   return data.map(user => ({
     id: user.id,
     email: user.email,
+    passwordHash: user.password_hash,
+    firstName: user.first_name || '',
+    lastName: user.last_name || '',
     role: user.role,
-    createdAt: user.created_at,
-    lastLogin: user.last_login
+    createdAt: new Date(user.created_at).getTime(),
+    lastLogin: user.last_login ? new Date(user.last_login).getTime() : undefined
   }))
 }
 
@@ -345,6 +348,61 @@ export async function deleteAIModel(id: number): Promise<void> {
   if (error) {
     throw new Error(`Failed to delete AI model: ${error.message}`)
   }
+}
+
+// Password Reset Functions
+export async function createPasswordResetToken(email: string): Promise<string | null> {
+  const user = await getUserByEmail(email)
+  if (!user) return null
+
+  // Generate a random token
+  const token = CryptoJS.lib.WordArray.random(32).toString()
+  const expiresAt = new Date()
+  expiresAt.setHours(expiresAt.getHours() + 1) // Token expires in 1 hour
+
+  const { error } = await supabase
+    .from('password_reset_tokens')
+    .insert({
+      user_id: user.id,
+      token,
+      expires_at: expiresAt.toISOString()
+    })
+
+  if (error) {
+    throw new Error(`Failed to create password reset token: ${error.message}`)
+  }
+
+  return token
+}
+
+export async function resetPassword(token: string, newPassword: string): Promise<boolean> {
+  // Find valid token
+  const { data: tokenData, error: tokenError } = await supabase
+    .from('password_reset_tokens')
+    .select('*, users(email)')
+    .eq('token', token)
+    .eq('used', false)
+    .gt('expires_at', new Date().toISOString())
+    .single()
+
+  if (tokenError || !tokenData) return false
+
+  // Update password
+  const passwordHash = CryptoJS.SHA256(newPassword).toString()
+  const { error: updateError } = await supabase
+    .from('users')
+    .update({ password_hash: passwordHash })
+    .eq('id', tokenData.user_id)
+
+  if (updateError) return false
+
+  // Mark token as used
+  await supabase
+    .from('password_reset_tokens')
+    .update({ used: true })
+    .eq('id', tokenData.id)
+
+  return true
 }
 
 // Initialize default super admin if it doesn't exist

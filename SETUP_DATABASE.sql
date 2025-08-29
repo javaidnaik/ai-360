@@ -1,5 +1,5 @@
--- Pixshop Database Schema for Supabase
--- Run this SQL in your Supabase SQL Editor to set up the database
+-- PIXSHOP COMPLETE DATABASE SETUP
+-- Copy and paste this entire SQL into your Supabase SQL Editor and click RUN
 
 -- Enable Row Level Security
 ALTER DATABASE postgres SET row_security = on;
@@ -59,32 +59,24 @@ CREATE INDEX IF NOT EXISTS idx_ai_models_active ON ai_models(is_active);
 CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_token ON password_reset_tokens(token);
 CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id ON password_reset_tokens(user_id);
 
--- Row Level Security Policies
--- Note: Since we're using custom authentication (not Supabase Auth), 
--- we'll disable RLS for now and rely on application-level security
-
--- Users table - Allow all operations for custom auth
+-- Row Level Security Policies (Allow all for custom auth)
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow all operations on users" ON users FOR ALL USING (true);
 
--- Videos table - Allow all operations for custom auth  
 ALTER TABLE videos ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow all operations on videos" ON videos FOR ALL USING (true);
 
--- AI Models table - Allow all operations for custom auth
 ALTER TABLE ai_models ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow all operations on ai_models" ON ai_models FOR ALL USING (true);
 
--- Password reset tokens table - Allow all operations for custom auth
 ALTER TABLE password_reset_tokens ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow all operations on password_reset_tokens" ON password_reset_tokens FOR ALL USING (true);
 
 -- Insert default super admin
-INSERT INTO users (email, password_hash, role, created_at) 
-VALUES ('admin@pixshop.com', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855', 'super_admin', NOW())
+INSERT INTO users (email, password_hash, role, created_at, first_name, last_name) 
+VALUES ('admin@pixshop.com', 'ef2d127de37b942baad06145e54b0c619a1f22327b2ebbcfbec78f5564afe39d', 'super_admin', NOW(), 'Super', 'Admin')
 ON CONFLICT (email) DO NOTHING;
 
--- Note: The password hash above is for an empty string. 
--- You should update it with the proper hash for 'admin123!' after running this script.
--- Run this to update the password:
--- UPDATE users SET password_hash = 'ef2d127de37b942baad06145e54b0c619a1f22327b2ebbcfbec78f5564afe39d' WHERE email = 'admin@pixshop.com';
+-- Verify tables were created
+SELECT 'Tables created successfully!' as status;
+SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;
