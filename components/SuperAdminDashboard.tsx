@@ -103,17 +103,33 @@ const SuperAdminDashboard: React.FC = () => {
   const handleToggleSiteAccess = async () => {
     try {
       const newState = !siteAccessEnabled;
-      await db.setSiteAccess(newState);
-      setSiteAccessEnabled(newState);
       
-      if (newState) {
-        alert('Site access has been ENABLED. All users can now access the site.');
+      // Use the Vercel API endpoint
+      const response = await fetch('/api/site-access', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-role': 'superadmin'
+        },
+        body: JSON.stringify({ enabled: newState })
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok) {
+        setSiteAccessEnabled(newState);
+        
+        if (newState) {
+          alert('Site access has been ENABLED. All users can now access the site.');
+        } else {
+          alert('Site access has been DISABLED. Only super admins can access the site.\n\nNote: For full server-side protection, update the SITE_ACCESS_ENABLED environment variable in your Vercel dashboard.');
+        }
       } else {
-        alert('Site access has been DISABLED. Only super admins can access the site.');
+        throw new Error(result.error || 'Failed to update site access');
       }
     } catch (error) {
       console.error('Error toggling site access:', error);
-      alert('Failed to update site access setting');
+      alert('Failed to update site access setting: ' + error.message);
     }
   };
 

@@ -1,4 +1,12 @@
 {
+  "functions": {
+    "api/site-access.ts": {
+      "runtime": "@vercel/node"
+    }
+  },
+  "env": {
+    "SITE_ACCESS_ENABLED": "true"
+  },
   "rewrites": [
     {
       "source": "/(.*)",
