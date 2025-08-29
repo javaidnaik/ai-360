@@ -5,10 +5,11 @@
 import { VideoCreation, User, AIModelConfig, UserAnalytics } from '../types';
 
 const DB_NAME = 'PixshopDB';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE_NAME = 'videos';
 const USER_STORE_NAME = 'users';
 const MODEL_STORE_NAME = 'models';
+const SETTINGS_STORE_NAME = 'settings';
 
 let db: IDBDatabase;
 
@@ -51,6 +52,17 @@ function initDB(): Promise<IDBDatabase> {
         const modelStore = db.createObjectStore(MODEL_STORE_NAME, { keyPath: 'id', autoIncrement: true });
         modelStore.createIndex('name', 'name', { unique: true });
         modelStore.createIndex('isActive', 'isActive', { unique: false });
+      }
+      
+      // Create settings store
+      if (!db.objectStoreNames.contains(SETTINGS_STORE_NAME)) {
+        const settingsStore = db.createObjectStore(SETTINGS_STORE_NAME, { keyPath: 'key' });
+        // Initialize default settings
+        const transaction = (event.target as IDBOpenDBRequest).transaction;
+        if (transaction) {
+          const store = transaction.objectStore(SETTINGS_STORE_NAME);
+          store.add({ key: 'siteAccessEnabled', value: true, updatedAt: Date.now() });
+        }
       }
     };
   });
@@ -332,4 +344,53 @@ export async function getVideosByUserId(userId: number): Promise<VideoCreation[]
             reject(new Error('Failed to retrieve user videos from DB.'));
         };
     });
+}
+
+// Settings Management Functions
+export async function getSetting(key: string): Promise<any> {
+    const db = await initDB();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction(SETTINGS_STORE_NAME, 'readonly');
+        const store = transaction.objectStore(SETTINGS_STORE_NAME);
+        const request = store.get(key);
+
+        request.onsuccess = () => {
+            const result = request.result;
+            resolve(result ? result.value : null);
+        };
+        request.onerror = () => {
+            reject(new Error('Failed to get setting from DB.'));
+        };
+    });
+}
+
+export async function setSetting(key: string, value: any): Promise<void> {
+    const db = await initDB();
+    return new Promise((resolve, reject) => {
+        const transaction = db.transaction(SETTINGS_STORE_NAME, 'readwrite');
+        const store = transaction.objectStore(SETTINGS_STORE_NAME);
+        const request = store.put({ key, value, updatedAt: Date.now() });
+
+        request.onsuccess = () => {
+            resolve();
+        };
+        request.onerror = () => {
+            reject(new Error('Failed to set setting in DB.'));
+        };
+    });
+}
+
+// Site Access Control Functions
+export async function isSiteAccessEnabled(): Promise<boolean> {
+    try {
+        const enabled = await getSetting('siteAccessEnabled');
+        return enabled !== null ? enabled : true; // Default to enabled if not set
+    } catch (error) {
+        console.error('Error checking site access:', error);
+        return true; // Default to enabled on error
+    }
+}
+
+export async function setSiteAccess(enabled: boolean): Promise<void> {
+    return setSetting('siteAccessEnabled', enabled);
 }
