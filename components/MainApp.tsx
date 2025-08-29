@@ -106,14 +106,20 @@ const MainApp: React.FC = () => {
     const checkDriveAuth = async () => {
       if (user) {
         try {
+          // Set current user for Google Drive service
+          await googleDriveService.setCurrentUser(user.id);
+          
+          // Load user settings from database
           const userSettings = await db.getUserSettings(user.id);
-          setIsDriveAuthenticated(userSettings.googleDriveConnected);
+          setIsDriveAuthenticated(userSettings.googleDriveConnected && googleDriveService.isUserAuthenticated());
         } catch (error) {
           console.error('Failed to load Google Drive settings:', error);
-          setIsDriveAuthenticated(googleDriveService.isUserAuthenticated());
+          setIsDriveAuthenticated(false);
         }
       } else {
-        setIsDriveAuthenticated(googleDriveService.isUserAuthenticated());
+        // Clear user from Google Drive service
+        googleDriveService.clearUser();
+        setIsDriveAuthenticated(false);
       }
     };
     checkDriveAuth();

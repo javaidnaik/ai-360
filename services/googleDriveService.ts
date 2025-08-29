@@ -16,42 +16,66 @@ export interface DriveFile {
 
 export class GoogleDriveService {
   private static instance: GoogleDriveService;
-  private isAuthenticated = false;
-  private readonly TOKEN_STORAGE_KEY = 'pixshop_google_drive_token';
+  private currentUserId: number | null = null;
+  private currentToken: string | null = null;
 
   private constructor() {}
 
   static getInstance(): GoogleDriveService {
     if (!GoogleDriveService.instance) {
       GoogleDriveService.instance = new GoogleDriveService();
-      GoogleDriveService.instance.initializeFromStorage();
     }
     return GoogleDriveService.instance;
   }
 
   /**
-   * Initialize authentication state from localStorage
+   * Set the current user and load their Google Drive token from database
    */
-  private initializeFromStorage(): void {
+  async setCurrentUser(userId: number): Promise<void> {
+    this.currentUserId = userId;
+    await this.loadUserToken();
+  }
+
+  /**
+   * Load user's Google Drive token from database
+   */
+  private async loadUserToken(): Promise<void> {
+    if (!this.currentUserId) {
+      this.currentToken = null;
+      return;
+    }
+
     try {
-      const storedToken = localStorage.getItem(this.TOKEN_STORAGE_KEY);
-      if (storedToken) {
-        const tokenData = JSON.parse(storedToken);
-        // Check if token is still valid (not expired)
-        if (tokenData.expires_at && tokenData.expires_at > Date.now()) {
-          this.isAuthenticated = true;
-          console.log('🔄 Restored Google Drive authentication from storage');
-        } else {
-          // Token expired, remove it
-          localStorage.removeItem(this.TOKEN_STORAGE_KEY);
-          console.log('🕒 Stored Google Drive token expired, removed');
-        }
-      }
+      // Import db dynamically to avoid circular imports
+      const { getUserSettings } = await import('./supabaseDb');
+      const settings = await getUserSettings(this.currentUserId);
+      this.currentToken = settings.googleDriveToken;
     } catch (error) {
-      console.error('Error loading stored token:', error);
-      localStorage.removeItem(this.TOKEN_STORAGE_KEY);
+      console.error('Failed to load Google Drive token from database:', error);
+      this.currentToken = null;
     }
   }
+
+  /**
+   * Save user's Google Drive token to database
+   */
+  private async saveUserToken(token: string, refreshToken?: string): Promise<void> {
+    if (!this.currentUserId) return;
+
+    try {
+      const { updateUserSettings } = await import('./supabaseDb');
+      await updateUserSettings(this.currentUserId, {
+        googleDriveToken: token,
+        googleDriveRefreshToken: refreshToken,
+        googleDriveConnected: true
+      });
+      this.currentToken = token;
+    } catch (error) {
+      console.error('Failed to save Google Drive token to database:', error);
+    }
+  }
+
+
 
   /**
    * Save authentication token to localStorage
@@ -94,12 +118,11 @@ export class GoogleDriveService {
    */
   async authenticate(): Promise<boolean> {
     try {
-      // Check if we already have a valid stored token
-      const storedToken = this.getStoredToken();
-      if (storedToken && this.isAuthenticated) {
-        console.log('🔄 Using stored Google Drive token');
+      // Check if we already have a valid token for current user
+      if (this.currentToken && this.currentUserId) {
+        console.log('🔄 Using stored Google Drive token from database');
         await this.initializeGoogleAPI();
-        gapi.client.setToken(storedToken);
+        gapi.client.setToken({ access_token: this.currentToken });
         return true;
       }
 
@@ -139,10 +162,10 @@ export class GoogleDriveService {
       gapi.client.setToken(tokenResponse);
       
       // Save token to localStorage for persistence
-      this.saveTokenToStorage(tokenResponse);
+      // Save the token to database for current user
+      await this.saveUserToken(tokenResponse.access_token, tokenResponse.refresh_token);
       
-      this.isAuthenticated = true;
-      console.log('✅ Google Drive authentication successful and saved');
+      console.log('✅ Google Drive authentication successful and saved to database');
       return true;
     } catch (error) {
       console.error('Google Drive authentication failed:', error);
@@ -430,11 +453,22 @@ export class GoogleDriveService {
       gapi.client.setToken(null);
     }
     
-    // Clear stored token
-    localStorage.removeItem(this.TOKEN_STORAGE_KEY);
+    // Clear user's Google Drive connection in database
+    if (this.currentUserId) {
+      try {
+        const { updateUserSettings } = await import('./supabaseDb');
+        await updateUserSettings(this.currentUserId, {
+          googleDriveConnected: false,
+          googleDriveToken: '',
+          googleDriveRefreshToken: ''
+        });
+      } catch (error) {
+        console.error('Failed to clear Google Drive token from database:', error);
+      }
+    }
     
-    this.isAuthenticated = false;
-    console.log('🔓 Signed out from Google Drive and cleared stored token');
+    this.currentToken = null;
+    console.log('🔓 Signed out from Google Drive and cleared database token');
   }
 
   /**

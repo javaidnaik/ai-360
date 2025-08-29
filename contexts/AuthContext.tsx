@@ -63,7 +63,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return { success: result.success, message: result.message };
   };
 
-  const logout = () => {
+  const logout = async () => {
+    // Clear Google Drive service when logging out
+    try {
+      const { googleDriveService } = await import('../services/googleDriveService');
+      googleDriveService.getInstance().clearUser();
+    } catch (error) {
+      console.error('Error clearing Google Drive service:', error);
+    }
+    
     authService.logout();
     setAuthState(authService.getAuthState());
   };
