@@ -34,10 +34,24 @@ const GoogleDriveAuth: React.FC<GoogleDriveAuthProps> = ({ onAuthSuccess, onAuth
       } else {
         onAuthError('Failed to authenticate with Google Drive');
       }
-    } catch (error) {
-      console.error('Authentication error:', error);
-      onAuthError('Authentication failed. Please try again.');
-    } finally {
+         } catch (error) {
+       console.error('Authentication error:', error);
+       
+       let errorMessage = 'Authentication failed. ';
+       if (error instanceof Error) {
+         if (error.message.includes('credentials not configured')) {
+           errorMessage = 'Google Drive API not configured. Please contact administrator.';
+         } else if (error.message.includes('Not a valid origin')) {
+           errorMessage = 'Domain not authorized. Please contact administrator to add this domain to Google OAuth settings.';
+         } else if (error.message.includes('idpiframe_initialization_failed')) {
+           errorMessage = 'Google API initialization failed. Please check domain configuration.';
+         } else {
+           errorMessage += error.message;
+         }
+       }
+       
+       onAuthError(errorMessage);
+     } finally {
       setIsAuthenticating(false);
     }
   };

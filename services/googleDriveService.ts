@@ -36,8 +36,12 @@ export class GoogleDriveService {
   async authenticate(): Promise<boolean> {
     try {
       // For browser-based authentication, we'll use Google's OAuth2 flow
-      const CLIENT_ID = process.env.GOOGLE_CLIENT_ID || 'your-google-client-id';
-      const API_KEY = process.env.GOOGLE_API_KEY || 'your-google-api-key';
+      const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+      const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
+      
+      if (!CLIENT_ID || !API_KEY || CLIENT_ID === 'your-google-client-id' || API_KEY === 'your-google-api-key') {
+        throw new Error('Google Drive API credentials not configured. Please set VITE_GOOGLE_CLIENT_ID and VITE_GOOGLE_API_KEY environment variables.');
+      }
       
       // Load Google API
       await this.loadGoogleAPI();
