@@ -210,25 +210,13 @@ export class AuthService {
   }
 
   isSuperAdmin(): boolean {
-    return this.authState.user?.role === 'superadmin';
+    return this.authState.user?.role === 'super_admin';
   }
 
   async createSuperAdmin(): Promise<void> {
     try {
-      const existingAdmin = await db.getUserByEmail('admin@pixshop.com');
-      if (!existingAdmin) {
-        const passwordHash = hashPassword('admin123!');
-        const adminUser: Omit<User, 'id'> = {
-          email: 'admin@pixshop.com',
-          passwordHash,
-          firstName: 'Super',
-          lastName: 'Admin',
-          role: 'superadmin',
-          createdAt: Date.now()
-        };
-        await db.addUser(adminUser);
-        console.log('Super admin created: admin@pixshop.com / admin123!');
-      }
+      // Use the Supabase initialization function instead
+      await db.initializeDefaultSuperAdmin();
     } catch (error) {
       console.error('Error creating super admin:', error);
     }

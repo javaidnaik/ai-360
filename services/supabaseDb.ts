@@ -63,6 +63,30 @@ export async function getUserByEmail(email: string): Promise<User | null> {
   }
 }
 
+export async function getUserById(id: number): Promise<User | null> {
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', id)
+    .single()
+
+  if (error) {
+    if (error.code === 'PGRST116') return null // No rows returned
+    throw new Error(`Failed to get user: ${error.message}`)
+  }
+
+  return {
+    id: data.id,
+    email: data.email,
+    passwordHash: data.password_hash,
+    firstName: data.first_name || '',
+    lastName: data.last_name || '',
+    role: data.role,
+    createdAt: new Date(data.created_at).getTime(),
+    lastLogin: data.last_login ? new Date(data.last_login).getTime() : undefined
+  }
+}
+
 export async function validateUser(email: string, password: string): Promise<User | null> {
   const user = await getUserByEmail(email)
   if (!user) return null
