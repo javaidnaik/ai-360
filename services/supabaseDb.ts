@@ -355,7 +355,7 @@ export async function addVideo(video: Omit<VideoCreation, 'id' | 'url'>): Promis
       user_id: video.userId,
       url: '', // Will be set to blob URL on client side
       prompt: video.prompt,
-      animation_style: video.animationStyle,
+      animation_style: video.animationStyle || 'Default', // Provide default value
       timestamp: new Date(video.timestamp).toISOString(),
       drive_file_id: video.driveFileId,
       drive_view_link: video.driveViewLink,

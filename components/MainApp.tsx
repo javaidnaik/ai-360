@@ -267,6 +267,7 @@ const MainApp: React.FC = () => {
       const newCreation: Omit<VideoCreation, 'id' | 'url'> = {
         prompt: finalPrompt,
         videoBlob: generatedBlob,
+        animationStyle: animationStyle, // Include animation style
         timestamp: Date.now(),
         userId: user?.id, // Associate with current user
         driveFileId,

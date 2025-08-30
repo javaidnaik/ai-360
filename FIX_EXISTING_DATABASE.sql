@@ -113,6 +113,15 @@ SET
     approved_at = COALESCE(approved_at, NOW())
 WHERE role = 'super_admin' AND approval_status != 'approved';
 
+-- Fix animation_style column to allow NULL values if it exists
+DO $$ 
+BEGIN
+    -- Check if animation_style column exists and make it nullable
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'videos' AND column_name = 'animation_style') THEN
+        ALTER TABLE videos ALTER COLUMN animation_style DROP NOT NULL;
+    END IF;
+END $$;
+
 -- Initialize maintenance settings (disabled by default)
 INSERT INTO maintenance_settings (is_maintenance_mode, maintenance_message, maintenance_title) 
 VALUES (FALSE, 'We are currently performing scheduled maintenance. Please check back soon.', 'Site Under Maintenance')
