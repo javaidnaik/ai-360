@@ -44,7 +44,7 @@ class NanoBananaService {
     this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta';
     
     if (!this.apiKey) {
-      console.warn('⚠️ Google API Key not found. Nano Banana service will use mock responses.');
+      console.warn('⚠️ Google API Key not found. Gemini Image Preview service will use mock responses.');
     }
   }
 
@@ -56,11 +56,11 @@ class NanoBananaService {
   }
 
   /**
-   * Generate image using Google Nano Banana (Gemini 2.5 Flash)
+   * Generate image using Google Gemini 2.5 Flash Image Preview
    */
   async generateImage(options: ImageGenerationOptions): Promise<ImageGenerationResult> {
     try {
-      console.log('🎨 Generating image with Nano Banana...', options);
+      console.log('🎨 Generating image with Gemini Image Preview...', options);
 
       // If no API key, return mock response
       if (!this.apiKey) {
@@ -70,8 +70,8 @@ class NanoBananaService {
       // Prepare the request based on the type
       const requestData = await this.prepareRequest(options);
       
-      // Make the API call to Gemini 2.5 Flash
-      const response = await fetch(`${this.baseUrl}/models/gemini-2.5-flash:generateContent?key=${this.apiKey}`, {
+      // Make the API call to Gemini 2.5 Flash Image Preview
+      const response = await fetch(`${this.baseUrl}/models/gemini-2.5-flash-image-preview:generateContent?key=${this.apiKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -80,7 +80,7 @@ class NanoBananaService {
       });
 
       if (!response.ok) {
-        throw new Error(`Nano Banana API error: ${response.status} ${response.statusText}`);
+        throw new Error(`Gemini Image Preview API error: ${response.status} ${response.statusText}`);
       }
 
       const result = await response.json();
@@ -93,7 +93,7 @@ class NanoBananaService {
         prompt: options.prompt,
         type: options.type,
         metadata: {
-          model: 'Google Nano Banana (Gemini 2.5 Flash)',
+          model: 'Google Gemini 2.5 Flash Image Preview',
           timestamp: Date.now(),
           dimensions: {
             width: options.width || 512,
@@ -103,7 +103,7 @@ class NanoBananaService {
       };
 
     } catch (error) {
-      console.error('❌ Nano Banana generation failed:', error);
+      console.error('❌ Gemini Image Preview generation failed:', error);
       throw new Error(`Image generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }

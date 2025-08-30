@@ -114,9 +114,9 @@ const MyCreations: React.FC<MyCreationsProps> = ({ onBackToStart }) => {
               >
                 {/* Video Preview */}
                 <div className="aspect-video bg-gray-800 relative group">
-                  {video.videoUrl ? (
+                  {(video.videoUrl || video.url) ? (
                     <video
-                      src={video.videoUrl}
+                      src={video.videoUrl || video.url}
                       className="w-full h-full object-cover"
                       controls
                       preload="metadata"
@@ -138,7 +138,7 @@ const MyCreations: React.FC<MyCreationsProps> = ({ onBackToStart }) => {
                         {video.prompt || 'Untitled Creation'}
                       </h3>
                       <p className="text-xs text-gray-400">
-                        {video.animationStyle} • {new Date(video.createdAt).toLocaleDateString()}
+                        {video.animationStyle || 'Default'} • {new Date(video.createdAt || video.timestamp).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
@@ -146,21 +146,21 @@ const MyCreations: React.FC<MyCreationsProps> = ({ onBackToStart }) => {
                   {/* Status */}
                   <div className="mb-3">
                     <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                      video.status === 'completed' 
+                      (video.status || 'completed') === 'completed' 
                         ? 'bg-green-500/20 text-green-300' 
-                        : video.status === 'failed'
+                        : (video.status || 'completed') === 'failed'
                         ? 'bg-red-500/20 text-red-300'
                         : 'bg-yellow-500/20 text-yellow-300'
                     }`}>
-                      {video.status.charAt(0).toUpperCase() + video.status.slice(1)}
+                      {((video.status || 'completed').charAt(0).toUpperCase() + (video.status || 'completed').slice(1))}
                     </span>
                   </div>
 
                   {/* Actions */}
                   <div className="flex items-center gap-2">
-                    {video.videoUrl && (
+                    {(video.videoUrl || video.url) && (
                       <button
-                        onClick={() => handleDownload(video.videoUrl!, `pixshop-${video.id}.mp4`)}
+                        onClick={() => handleDownload(video.videoUrl || video.url, `pixshop-${video.id}.mp4`)}
                         className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 rounded-lg text-sm font-medium transition-colors"
                       >
                         <DownloadIcon className="w-4 h-4" />

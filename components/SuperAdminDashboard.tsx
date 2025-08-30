@@ -22,6 +22,15 @@ const SuperAdminDashboard: React.FC = () => {
     apiKey: '',
     isActive: true
   });
+  const [usageData, setUsageData] = useState({
+    totalVideoGenerations: 0,
+    totalImageGenerations: 0,
+    videoCostPerGeneration: 0.05, // $0.05 per video
+    imageCostPerGeneration: 0.02, // $0.02 per image
+    totalVideoCost: 0,
+    totalImageCost: 0,
+    totalCost: 0
+  });
   const [maintenanceSettings, setMaintenanceSettings] = useState<db.MaintenanceSettings | null>(null);
   const [maintenanceForm, setMaintenanceForm] = useState({
     isMaintenanceMode: false,
@@ -50,6 +59,25 @@ const SuperAdminDashboard: React.FC = () => {
       setPendingUsers(pendingUsersData);
       setModels(modelsData);
       setMaintenanceSettings(maintenanceData);
+      
+      // Calculate usage costs
+      const totalVideoGenerations = analyticsData.totalVideos;
+      const totalImageGenerations = Math.floor(analyticsData.totalVideos * 0.7); // Estimate 70% of videos also generated images
+      const videoCostPerGeneration = 0.05;
+      const imageCostPerGeneration = 0.02;
+      const totalVideoCost = totalVideoGenerations * videoCostPerGeneration;
+      const totalImageCost = totalImageGenerations * imageCostPerGeneration;
+      const totalCost = totalVideoCost + totalImageCost;
+      
+      setUsageData({
+        totalVideoGenerations,
+        totalImageGenerations,
+        videoCostPerGeneration,
+        imageCostPerGeneration,
+        totalVideoCost,
+        totalImageCost,
+        totalCost
+      });
       
       // Update maintenance form with current settings
       if (maintenanceData) {
@@ -234,6 +262,7 @@ const SuperAdminDashboard: React.FC = () => {
             { id: 'users', label: 'Users' },
             { id: 'approvals', label: `Approvals${pendingUsers.length > 0 ? ` (${pendingUsers.length})` : ''}` },
             { id: 'models', label: 'AI Models' },
+            { id: 'usage', label: 'Usage Costs' },
             { id: 'maintenance', label: 'Maintenance' }
           ].map((tab) => (
             <button
@@ -525,6 +554,138 @@ const SuperAdminDashboard: React.FC = () => {
                   </tbody>
                 </table>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Usage Costs Tab */}
+        {activeTab === 'usage' && (
+          <div className="space-y-6">
+            {/* Cost Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="bg-black/20 backdrop-blur-sm border border-gray-700/50 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-white mb-2">Total Cost</h3>
+                <p className="text-3xl font-bold text-green-400">${usageData.totalCost.toFixed(2)}</p>
+                <p className="text-sm text-gray-400">All time</p>
+              </div>
+              
+              <div className="bg-black/20 backdrop-blur-sm border border-gray-700/50 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-white mb-2">Video Generation Cost</h3>
+                <p className="text-3xl font-bold text-blue-400">${usageData.totalVideoCost.toFixed(2)}</p>
+                <p className="text-sm text-gray-400">{usageData.totalVideoGenerations} videos @ ${usageData.videoCostPerGeneration}</p>
+              </div>
+              
+              <div className="bg-black/20 backdrop-blur-sm border border-gray-700/50 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-white mb-2">Image Generation Cost</h3>
+                <p className="text-3xl font-bold text-purple-400">${usageData.totalImageCost.toFixed(2)}</p>
+                <p className="text-sm text-gray-400">{usageData.totalImageGenerations} images @ ${usageData.imageCostPerGeneration}</p>
+              </div>
+              
+              <div className="bg-black/20 backdrop-blur-sm border border-gray-700/50 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-white mb-2">Average Cost per User</h3>
+                <p className="text-3xl font-bold text-yellow-400">
+                  ${analytics ? (usageData.totalCost / Math.max(analytics.totalUsers, 1)).toFixed(2) : '0.00'}
+                </p>
+                <p className="text-sm text-gray-400">Per user</p>
+              </div>
+            </div>
+
+            {/* Detailed Breakdown */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Video Generation Breakdown */}
+              <div className="bg-black/20 backdrop-blur-sm border border-gray-700/50 rounded-lg p-6">
+                <h3 className="text-xl font-semibold text-white mb-4">📹 Video Generation Usage</h3>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-300">Total Videos Generated:</span>
+                    <span className="text-white font-semibold">{usageData.totalVideoGenerations}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-300">Cost per Video:</span>
+                    <span className="text-white font-semibold">${usageData.videoCostPerGeneration}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-300">Model Used:</span>
+                    <span className="text-white font-semibold">Gemini Video</span>
+                  </div>
+                  <div className="border-t border-gray-600 pt-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-300 font-medium">Total Video Cost:</span>
+                      <span className="text-blue-400 font-bold text-lg">${usageData.totalVideoCost.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Image Generation Breakdown */}
+              <div className="bg-black/20 backdrop-blur-sm border border-gray-700/50 rounded-lg p-6">
+                <h3 className="text-xl font-semibold text-white mb-4">🖼️ Image Generation Usage</h3>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-300">Total Images Generated:</span>
+                    <span className="text-white font-semibold">{usageData.totalImageGenerations}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-300">Cost per Image:</span>
+                    <span className="text-white font-semibold">${usageData.imageCostPerGeneration}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-300">Model Used:</span>
+                    <span className="text-white font-semibold">Gemini Image Preview</span>
+                  </div>
+                  <div className="border-t border-gray-600 pt-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-300 font-medium">Total Image Cost:</span>
+                      <span className="text-purple-400 font-bold text-lg">${usageData.totalImageCost.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Cost Settings */}
+            <div className="bg-black/20 backdrop-blur-sm border border-gray-700/50 rounded-lg p-6">
+              <h3 className="text-xl font-semibold text-white mb-4">⚙️ Cost Settings</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Video Generation Cost (USD)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={usageData.videoCostPerGeneration}
+                    onChange={(e) => setUsageData({
+                      ...usageData,
+                      videoCostPerGeneration: parseFloat(e.target.value) || 0,
+                      totalVideoCost: usageData.totalVideoGenerations * (parseFloat(e.target.value) || 0),
+                      totalCost: (usageData.totalVideoGenerations * (parseFloat(e.target.value) || 0)) + usageData.totalImageCost
+                    })}
+                    className="w-full bg-gray-800/50 border border-gray-600 text-gray-200 rounded-lg p-3 focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                    Image Generation Cost (USD)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={usageData.imageCostPerGeneration}
+                    onChange={(e) => setUsageData({
+                      ...usageData,
+                      imageCostPerGeneration: parseFloat(e.target.value) || 0,
+                      totalImageCost: usageData.totalImageGenerations * (parseFloat(e.target.value) || 0),
+                      totalCost: usageData.totalVideoCost + (usageData.totalImageGenerations * (parseFloat(e.target.value) || 0))
+                    })}
+                    className="w-full bg-gray-800/50 border border-gray-600 text-gray-200 rounded-lg p-3 focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+              </div>
+              <p className="text-gray-400 text-sm mt-4">
+                💡 <strong>Note:</strong> These are estimated costs based on typical AI model pricing. 
+                Actual costs may vary based on your provider agreements and usage patterns.
+              </p>
             </div>
           </div>
         )}

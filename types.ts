@@ -15,6 +15,10 @@ export interface VideoCreation {
     driveViewLink?: string; // Google Drive view link
     driveDownloadLink?: string; // Google Drive download link
     isStoredInDrive?: boolean; // Whether the video is stored in Google Drive
+    // Additional properties for MyCreations component
+    status?: 'pending' | 'processing' | 'completed' | 'failed'; // Video generation status
+    createdAt?: number; // Alternative to timestamp for display
+    videoUrl?: string; // Alternative to url for video source
 }
 
 export interface User {
