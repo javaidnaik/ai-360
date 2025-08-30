@@ -109,53 +109,27 @@ class NanoBananaService {
   }
 
   /**
-   * Prepare request data based on generation type
+   * Prepare request data based on generation type (following official API format)
    */
   private async prepareRequest(options: ImageGenerationOptions): Promise<any> {
-    const baseRequest = {
-      contents: [{
-        parts: [{
-          text: this.buildPrompt(options)
-        }]
-      }],
-      generationConfig: {
-        temperature: 0.7,
-        topK: 32,
-        topP: 1,
-        maxOutputTokens: 4096,
-      },
-      safetySettings: [
-        {
-          category: "HARM_CATEGORY_HARASSMENT",
-          threshold: "BLOCK_MEDIUM_AND_ABOVE"
-        },
-        {
-          category: "HARM_CATEGORY_HATE_SPEECH",
-          threshold: "BLOCK_MEDIUM_AND_ABOVE"
-        },
-        {
-          category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-          threshold: "BLOCK_MEDIUM_AND_ABOVE"
-        },
-        {
-          category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-          threshold: "BLOCK_MEDIUM_AND_ABOVE"
-        }
-      ]
-    };
+    const parts: any[] = [{
+      text: this.buildPrompt(options)
+    }];
 
-    // Add image data for editing operations
+    // Add image data for editing operations (following official format)
     if (options.inputImage && options.type !== 'generate') {
       const imageData = await this.fileToBase64(options.inputImage);
-      baseRequest.contents[0].parts.push({
-        inline_data: {
-          mime_type: options.inputImage.type,
+      parts.push({
+        inlineData: {
+          mimeType: options.inputImage.type,
           data: imageData
         }
       });
     }
 
-    return baseRequest;
+    return {
+      contents: [{ parts }]
+    };
   }
 
   /**
@@ -200,17 +174,45 @@ class NanoBananaService {
   }
 
   /**
-   * Process API response and extract image URL
+   * Process API response and extract image URL (following official API response format)
    */
   private processResponse(result: any, options: ImageGenerationOptions): { url: string } {
-    // This is a placeholder - actual implementation would depend on
-    // the exact response format from Gemini 2.5 Flash
-    
-    // For now, we'll generate a placeholder based on the prompt
-    const encodedPrompt = encodeURIComponent(options.prompt.substring(0, 50));
-    const placeholderUrl = `https://via.placeholder.com/${options.width || 512}x${options.height || 512}/4F46E5/FFFFFF?text=${encodedPrompt}`;
-    
-    return { url: placeholderUrl };
+    try {
+      // According to the official documentation, the response format is:
+      // response.candidates[0].content.parts[0].inlineData.data (base64)
+      
+      if (!result.candidates || !result.candidates[0] || !result.candidates[0].content || !result.candidates[0].content.parts) {
+        throw new Error('Invalid response structure from Gemini API');
+      }
+
+      const parts = result.candidates[0].content.parts;
+      
+      for (const part of parts) {
+        if (part.inlineData && part.inlineData.data) {
+          // Convert base64 data to blob URL
+          const base64Data = part.inlineData.data;
+          const mimeType = part.inlineData.mimeType || 'image/png';
+          
+          // Create blob URL from base64 data
+          const byteCharacters = atob(base64Data);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          const blob = new Blob([byteArray], { type: mimeType });
+          const imageUrl = URL.createObjectURL(blob);
+          
+          return { url: imageUrl };
+        }
+      }
+      
+      throw new Error('No image data found in API response');
+      
+    } catch (error) {
+      console.error('Error processing Gemini API response:', error);
+      throw new Error(`Failed to process image data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   /**
