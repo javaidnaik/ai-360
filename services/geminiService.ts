@@ -29,6 +29,7 @@ export const generate360Video = async (
     combinedImage: File,
     prompt: string,
     onProgress: (message: string) => void,
+    duration: number = 5
 ): Promise<Blob> => {
     // Get active AI model configuration from database
     let apiKey = process.env.API_KEY;
@@ -62,13 +63,13 @@ export const generate360Video = async (
     onProgress('Sending request to the video model...');
     let operation = await ai.models.generateVideos({
         model: modelId,
-        prompt: prompt,
+        prompt: `${prompt} Make this video exactly ${duration} seconds long.`,
         image: {
             imageBytes: imageBytes,
             mimeType: combinedImage.type,
         },
         config: {
-            numberOfVideos: 1,
+            numberOfVideos: 1
         }
     });
 

@@ -25,3 +25,37 @@ html, body {
   height: 100%;
   font-family: 'Inter', sans-serif;
 }
+
+/* Custom slider styles */
+.slider::-webkit-slider-thumb {
+  appearance: none;
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #9333ea, #3b82f6);
+  cursor: pointer;
+  border: 2px solid #1f2937;
+  box-shadow: 0 0 10px rgba(147, 51, 234, 0.5);
+}
+
+.slider::-webkit-slider-track {
+  height: 8px;
+  border-radius: 4px;
+  background: #374151;
+}
+
+.slider::-moz-range-thumb {
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #9333ea, #3b82f6);
+  cursor: pointer;
+  border: 2px solid #1f2937;
+  box-shadow: 0 0 10px rgba(147, 51, 234, 0.5);
+}
+
+.slider::-moz-range-track {
+  height: 8px;
+  border-radius: 4px;
+  background: #374151;
+}

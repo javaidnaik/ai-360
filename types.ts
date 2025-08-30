@@ -26,6 +26,9 @@ export interface User {
     role: 'user' | 'superadmin';
     createdAt: number;
     lastLogin?: number;
+    approvalStatus: 'pending' | 'approved' | 'rejected';
+    approvedBy?: number;
+    approvedAt?: number;
 }
 
 export interface AuthState {

@@ -13,6 +13,21 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'last_name') THEN
         ALTER TABLE users ADD COLUMN last_name VARCHAR(255);
     END IF;
+    
+    -- Add approval status column if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'approval_status') THEN
+        ALTER TABLE users ADD COLUMN approval_status VARCHAR(20) DEFAULT 'pending';
+    END IF;
+    
+    -- Add approved_by column if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'approved_by') THEN
+        ALTER TABLE users ADD COLUMN approved_by INTEGER REFERENCES users(id);
+    END IF;
+    
+    -- Add approved_at column if it doesn't exist
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'approved_at') THEN
+        ALTER TABLE users ADD COLUMN approved_at TIMESTAMP WITH TIME ZONE;
+    END IF;
 END $$;
 
 -- Create password_reset_tokens table if it doesn't exist
@@ -74,18 +89,33 @@ BEGIN
     CREATE POLICY "Allow all operations on maintenance_settings" ON maintenance_settings FOR ALL USING (true);
 END $$;
 
--- Update super admin with correct password and add names if missing
+-- Update existing super admin with correct password and add names if missing
 UPDATE users 
 SET 
     password_hash = 'b80921595f7fd56db0acd8581d5abafeca181b5beadbe1f6be83477076d22ccd',
     first_name = COALESCE(first_name, 'Super'),
-    last_name = COALESCE(last_name, 'Admin')
+    last_name = COALESCE(last_name, 'Admin'),
+    approval_status = 'approved',
+    approved_at = COALESCE(approved_at, NOW())
 WHERE email = 'admin@pixshop.com';
 
--- Insert super admin if it doesn't exist
-INSERT INTO users (email, password_hash, role, created_at, first_name, last_name) 
-VALUES ('admin@pixshop.com', 'b80921595f7fd56db0acd8581d5abafeca181b5beadbe1f6be83477076d22ccd', 'super_admin', NOW(), 'Super', 'Admin')
+-- Insert default super admin if it doesn't exist
+INSERT INTO users (email, password_hash, role, created_at, first_name, last_name, approval_status, approved_at) 
+VALUES ('admin@pixshop.com', 'b80921595f7fd56db0acd8581d5abafeca181b5beadbe1f6be83477076d22ccd', 'super_admin', NOW(), 'Super', 'Admin', 'approved', NOW())
 ON CONFLICT (email) DO NOTHING;
+
+-- Create new super admin for Javaid
+-- Password: 123456 -> SHA256('123456your-secret-key-here-make-it-long-and-random-for-production')
+INSERT INTO users (email, password_hash, role, created_at, first_name, last_name, approval_status, approved_at) 
+VALUES ('hi@javaid.in', '6ca13d52ca70c883e0f0bb101e425a89e8624de51db2d2392593af6a84118090', 'super_admin', NOW(), 'Javaid', 'Naik', 'approved', NOW())
+ON CONFLICT (email) DO NOTHING;
+
+-- Approve all existing super admins (in case any were missed)
+UPDATE users 
+SET 
+    approval_status = 'approved',
+    approved_at = COALESCE(approved_at, NOW())
+WHERE role = 'super_admin' AND approval_status != 'approved';
 
 -- Initialize maintenance settings (disabled by default)
 INSERT INTO maintenance_settings (is_maintenance_mode, maintenance_message, maintenance_title) 

@@ -63,6 +63,7 @@ const MainApp: React.FC = () => {
   const [images, setImages] = useState<File[]>([]);
   const [prompt, setPrompt] = useState<string>('');
   const [animationStyle, setAnimationStyle] = useState<string>('Cinematic Zoom');
+  const [videoDuration, setVideoDuration] = useState<number>(5); // Default 5 seconds
   const [loadingMessage, setLoadingMessage] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
@@ -233,11 +234,11 @@ const MainApp: React.FC = () => {
             animationPrompt = 'Create a 360-degree video of the object.';
     }
 
-    const finalPrompt = `${animationPrompt} ${prompt}`.trim();
+    const finalPrompt = `${animationPrompt} ${prompt} Duration: ${videoDuration} seconds.`.trim();
     
     try {
       const processedImageFile = await processImageForGeneration(images);
-      const generatedBlob = await generate360Video(processedImageFile, finalPrompt, setLoadingMessage);
+      const generatedBlob = await generate360Video(processedImageFile, finalPrompt, setLoadingMessage, videoDuration);
       
       let driveFileId: string | undefined;
       let driveViewLink: string | undefined;
@@ -308,8 +309,8 @@ const MainApp: React.FC = () => {
   const handleBackToStart = () => {
     setView('start');
     setImages([]);
-    setGeneratedVideo(null);
-    setErrorMessage('');
+    setVideoUrl(null);
+    setError(null);
   };
 
   const handleShowEditor = () => {
@@ -324,6 +325,7 @@ const MainApp: React.FC = () => {
     setImages([]);
     setPrompt('');
     setAnimationStyle('Cinematic Zoom');
+    setVideoDuration(5); // Reset to default 5 seconds
     setLoadingMessage('');
     setError(null);
     // videoUrl is revoked when the component unmounts or when a new video is made
@@ -459,6 +461,43 @@ const MainApp: React.FC = () => {
                         <option>Slow Spin</option>
                     </optgroup>
                 </select>
+            </div>
+
+            <div className="w-full bg-black/20 border border-gray-700/50 rounded-lg p-6 backdrop-blur-sm">
+                <h2 className="text-2xl font-bold text-gray-100 mb-1">Video Duration</h2>
+                <p className="text-gray-400 mb-4">Set the length of your 360° video (minimum 5 seconds).</p>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4">
+                    <input
+                      type="range"
+                      min="5"
+                      max="30"
+                      step="1"
+                      value={videoDuration}
+                      onChange={(e) => setVideoDuration(Number(e.target.value))}
+                      className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+                    />
+                    <div className="flex items-center gap-2 min-w-[100px]">
+                      <input
+                        type="number"
+                        min="5"
+                        max="30"
+                        value={videoDuration}
+                        onChange={(e) => {
+                          const value = Math.max(5, Math.min(30, Number(e.target.value)));
+                          setVideoDuration(value);
+                        }}
+                        className="w-16 bg-gray-800 border border-gray-600 text-gray-200 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                      />
+                      <span className="text-gray-400 text-sm">sec</span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span>5s</span>
+                    <span className="text-gray-400">Duration: {videoDuration} seconds</span>
+                    <span>30s</span>
+                  </div>
+                </div>
             </div>
 
             <div className="w-full bg-black/20 border border-gray-700/50 rounded-lg p-6 backdrop-blur-sm">

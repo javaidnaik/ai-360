@@ -10,9 +10,10 @@ import * as db from '../services/supabaseDb';
 
 const SuperAdminDashboard: React.FC = () => {
   const { user, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState<'analytics' | 'users' | 'models' | 'maintenance'>('analytics');
+  const [activeTab, setActiveTab] = useState<'analytics' | 'users' | 'models' | 'maintenance' | 'approvals'>('analytics');
   const [analytics, setAnalytics] = useState<UserAnalytics | null>(null);
   const [users, setUsers] = useState<User[]>([]);
+  const [pendingUsers, setPendingUsers] = useState<User[]>([]);
   const [models, setModels] = useState<AIModelConfig[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [newModel, setNewModel] = useState({
@@ -36,15 +37,17 @@ const SuperAdminDashboard: React.FC = () => {
   const loadData = async () => {
     try {
       setIsLoading(true);
-      const [analyticsData, usersData, modelsData, maintenanceData] = await Promise.all([
+      const [analyticsData, usersData, modelsData, maintenanceData, pendingUsersData] = await Promise.all([
         db.getUserAnalytics(),
         db.getAllUsers(),
         db.getAllAIModels(),
-        db.getMaintenanceSettings()
+        db.getMaintenanceSettings(),
+        db.getPendingUsers()
       ]);
       
       setAnalytics(analyticsData);
       setUsers(usersData);
+      setPendingUsers(pendingUsersData);
       setModels(modelsData);
       setMaintenanceSettings(maintenanceData);
       
@@ -118,6 +121,46 @@ const SuperAdminDashboard: React.FC = () => {
     }
   };
 
+  const handleApproveUser = async (userId: number) => {
+    if (!user) return;
+    
+    try {
+      await db.approveUser(userId, user.id);
+      // Refresh data
+      const [usersData, pendingUsersData] = await Promise.all([
+        db.getAllUsers(),
+        db.getPendingUsers()
+      ]);
+      setUsers(usersData);
+      setPendingUsers(pendingUsersData);
+      alert('User approved successfully!');
+    } catch (error) {
+      console.error('Error approving user:', error);
+      alert('Failed to approve user');
+    }
+  };
+
+  const handleRejectUser = async (userId: number) => {
+    if (!user) return;
+    
+    if (window.confirm('Are you sure you want to reject this user? This action cannot be undone.')) {
+      try {
+        await db.rejectUser(userId, user.id);
+        // Refresh data
+        const [usersData, pendingUsersData] = await Promise.all([
+          db.getAllUsers(),
+          db.getPendingUsers()
+        ]);
+        setUsers(usersData);
+        setPendingUsers(pendingUsersData);
+        alert('User rejected successfully!');
+      } catch (error) {
+        console.error('Error rejecting user:', error);
+        alert('Failed to reject user');
+      }
+    }
+  };
+
   const handleMaintenanceUpdate = async () => {
     try {
       const estimatedCompletion = maintenanceForm.estimatedCompletion 
@@ -185,10 +228,11 @@ const SuperAdminDashboard: React.FC = () => {
         </div>
 
         {/* Tabs */}
-        <div className="flex space-x-1 mb-6">
+        <div className="flex space-x-1 mb-6 flex-wrap">
           {[
             { id: 'analytics', label: 'Analytics' },
             { id: 'users', label: 'Users' },
+            { id: 'approvals', label: `Approvals${pendingUsers.length > 0 ? ` (${pendingUsers.length})` : ''}` },
             { id: 'models', label: 'AI Models' },
             { id: 'maintenance', label: 'Maintenance' }
           ].map((tab) => (
@@ -237,6 +281,79 @@ const SuperAdminDashboard: React.FC = () => {
           </div>
         )}
 
+        {/* Approvals Tab */}
+        {activeTab === 'approvals' && (
+          <div className="bg-black/20 backdrop-blur-sm border border-gray-700/50 rounded-lg overflow-hidden">
+            <div className="p-6 border-b border-gray-700/50">
+              <h3 className="text-xl font-semibold text-white">User Approvals</h3>
+              <p className="text-gray-400 text-sm mt-1">
+                Review and approve new user registrations
+              </p>
+            </div>
+            {pendingUsers.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-800/50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">User</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Email</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Registered</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-700/50">
+                    {pendingUsers.map((pendingUser) => (
+                      <tr key={pendingUser.id} className="hover:bg-gray-800/25">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-white">
+                            {pendingUser.firstName} {pendingUser.lastName}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                          {pendingUser.email}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                          {new Date(pendingUser.createdAt).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                            Pending
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+                          <button
+                            onClick={() => handleApproveUser(pendingUser.id)}
+                            className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm font-medium transition"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => handleRejectUser(pendingUser.id)}
+                            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm font-medium transition"
+                          >
+                            Reject
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="p-8 text-center">
+                <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h4 className="text-lg font-medium text-white mb-2">No Pending Approvals</h4>
+                <p className="text-gray-400">All users have been reviewed. New registrations will appear here.</p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Users Tab */}
         {activeTab === 'users' && (
           <div className="bg-black/20 backdrop-blur-sm border border-gray-700/50 rounded-lg overflow-hidden">
@@ -267,13 +384,26 @@ const SuperAdminDashboard: React.FC = () => {
                         {user.email}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          user.role === 'superadmin' 
-                            ? 'bg-purple-100 text-purple-800' 
-                            : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {user.role}
-                        </span>
+                        <div className="space-y-1">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            user.role === 'superadmin' 
+                              ? 'bg-purple-100 text-purple-800' 
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {user.role}
+                          </span>
+                          <div>
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                              user.approvalStatus === 'approved' 
+                                ? 'bg-green-100 text-green-800'
+                                : user.approvalStatus === 'rejected'
+                                ? 'bg-red-100 text-red-800'
+                                : 'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {user.approvalStatus}
+                            </span>
+                          </div>
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                         {new Date(user.createdAt).toLocaleDateString()}

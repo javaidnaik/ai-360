@@ -13,6 +13,10 @@ const JWT_SECRET = 'your-secret-key-here-make-it-long-and-random-for-production'
 export async function createUser(email: string, password: string, role: 'user' | 'super_admin' = 'user', firstName?: string, lastName?: string): Promise<User> {
   const passwordHash = CryptoJS.SHA256(password + JWT_SECRET).toString()
   
+  // Super admins are automatically approved, regular users need approval
+  const approvalStatus = role === 'super_admin' ? 'approved' : 'pending'
+  const approvedAt = role === 'super_admin' ? new Date().toISOString() : null
+  
   const { data, error } = await supabase
     .from('users')
     .insert({
@@ -21,6 +25,8 @@ export async function createUser(email: string, password: string, role: 'user' |
       first_name: firstName,
       last_name: lastName,
       role,
+      approval_status: approvalStatus,
+      approved_at: approvedAt,
       created_at: new Date().toISOString()
     })
     .select()
@@ -38,7 +44,10 @@ export async function createUser(email: string, password: string, role: 'user' |
     lastName: data.last_name || '',
     role: data.role,
     createdAt: new Date(data.created_at).getTime(),
-    lastLogin: data.last_login ? new Date(data.last_login).getTime() : undefined
+    lastLogin: data.last_login ? new Date(data.last_login).getTime() : undefined,
+    approvalStatus: data.approval_status || 'pending',
+    approvedBy: data.approved_by,
+    approvedAt: data.approved_at ? new Date(data.approved_at).getTime() : undefined
   }
 }
 
@@ -62,7 +71,10 @@ export async function getUserByEmail(email: string): Promise<User | null> {
     lastName: data.last_name || '',
     role: data.role,
     createdAt: new Date(data.created_at).getTime(),
-    lastLogin: data.last_login ? new Date(data.last_login).getTime() : undefined
+    lastLogin: data.last_login ? new Date(data.last_login).getTime() : undefined,
+    approvalStatus: data.approval_status || 'pending',
+    approvedBy: data.approved_by,
+    approvedAt: data.approved_at ? new Date(data.approved_at).getTime() : undefined
   }
 }
 
@@ -86,13 +98,21 @@ export async function getUserById(id: number): Promise<User | null> {
     lastName: data.last_name || '',
     role: data.role,
     createdAt: new Date(data.created_at).getTime(),
-    lastLogin: data.last_login ? new Date(data.last_login).getTime() : undefined
+    lastLogin: data.last_login ? new Date(data.last_login).getTime() : undefined,
+    approvalStatus: data.approval_status || 'pending',
+    approvedBy: data.approved_by,
+    approvedAt: data.approved_at ? new Date(data.approved_at).getTime() : undefined
   }
 }
 
 export async function validateUser(email: string, password: string): Promise<User | null> {
   const user = await getUserByEmail(email)
   if (!user) return null
+
+  // Check if user is approved
+  if (user.approvalStatus !== 'approved') {
+    throw new Error(`Account pending approval. Please wait for admin approval before logging in.`)
+  }
 
   const { data, error } = await supabase
     .from('users')
@@ -132,7 +152,10 @@ export async function getAllUsers(): Promise<User[]> {
     lastName: user.last_name || '',
     role: user.role,
     createdAt: new Date(user.created_at).getTime(),
-    lastLogin: user.last_login ? new Date(user.last_login).getTime() : undefined
+    lastLogin: user.last_login ? new Date(user.last_login).getTime() : undefined,
+    approvalStatus: user.approval_status || 'pending',
+    approvedBy: user.approved_by,
+    approvedAt: user.approved_at ? new Date(user.approved_at).getTime() : undefined
   }))
 }
 
@@ -152,6 +175,63 @@ export async function deleteUser(id: number): Promise<void> {
   if (error) {
     throw new Error(`Failed to delete user: ${error.message}`)
   }
+}
+
+// User Approval Functions
+export async function approveUser(userId: number, approvedBy: number): Promise<void> {
+  const { error } = await supabase
+    .from('users')
+    .update({
+      approval_status: 'approved',
+      approved_by: approvedBy,
+      approved_at: new Date().toISOString()
+    })
+    .eq('id', userId)
+
+  if (error) {
+    throw new Error(`Failed to approve user: ${error.message}`)
+  }
+}
+
+export async function rejectUser(userId: number, approvedBy: number): Promise<void> {
+  const { error } = await supabase
+    .from('users')
+    .update({
+      approval_status: 'rejected',
+      approved_by: approvedBy,
+      approved_at: new Date().toISOString()
+    })
+    .eq('id', userId)
+
+  if (error) {
+    throw new Error(`Failed to reject user: ${error.message}`)
+  }
+}
+
+export async function getPendingUsers(): Promise<User[]> {
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('approval_status', 'pending')
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    throw new Error(`Failed to get pending users: ${error.message}`)
+  }
+
+  return data.map(user => ({
+    id: user.id,
+    email: user.email,
+    passwordHash: user.password_hash,
+    firstName: user.first_name || '',
+    lastName: user.last_name || '',
+    role: user.role,
+    createdAt: new Date(user.created_at).getTime(),
+    lastLogin: user.last_login ? new Date(user.last_login).getTime() : undefined,
+    approvalStatus: user.approval_status || 'pending',
+    approvedBy: user.approved_by,
+    approvedAt: user.approved_at ? new Date(user.approved_at).getTime() : undefined
+  }))
 }
 
 export async function getUserAnalytics(): Promise<UserAnalytics> {
