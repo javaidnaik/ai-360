@@ -19,7 +19,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requireSuperA
     return <Navigate to="/auth" replace />;
   }
 
-  if (requireSuperAdmin && user?.role !== 'superadmin') {
+  if (requireSuperAdmin && user?.role !== 'super_admin') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-indigo-900 flex items-center justify-center p-4">
         <div className="text-center">
