@@ -173,34 +173,62 @@ export async function getUserAnalytics(): Promise<UserAnalytics> {
     throw new Error(`Failed to get video count: ${videosError.message}`)
   }
 
-  // Get users created in last 30 days
+  // Get users who logged in within the last 7 days (active users)
+  const sevenDaysAgo = new Date()
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+
+  const { count: activeUsers, error: activeUsersError } = await supabase
+    .from('users')
+    .select('*', { count: 'exact', head: true })
+    .gte('last_login', sevenDaysAgo.toISOString())
+
+  if (activeUsersError) {
+    throw new Error(`Failed to get active users count: ${activeUsersError.message}`)
+  }
+
+  // Get videos created today
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const { count: videosToday, error: videosTodayError } = await supabase
+    .from('videos')
+    .select('*', { count: 'exact', head: true })
+    .gte('timestamp', today.toISOString())
+
+  if (videosTodayError) {
+    throw new Error(`Failed to get today's videos count: ${videosTodayError.message}`)
+  }
+
+  // Get videos created in the last 7 days
+  const { count: videosThisWeek, error: videosWeekError } = await supabase
+    .from('videos')
+    .select('*', { count: 'exact', head: true })
+    .gte('timestamp', sevenDaysAgo.toISOString())
+
+  if (videosWeekError) {
+    throw new Error(`Failed to get this week's videos count: ${videosWeekError.message}`)
+  }
+
+  // Get videos created in the last 30 days
   const thirtyDaysAgo = new Date()
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-  const { count: newUsers, error: newUsersError } = await supabase
-    .from('users')
-    .select('*', { count: 'exact', head: true })
-    .gte('created_at', thirtyDaysAgo.toISOString())
-
-  if (newUsersError) {
-    throw new Error(`Failed to get new users count: ${newUsersError.message}`)
-  }
-
-  // Get videos created in last 30 days
-  const { count: newVideos, error: newVideosError } = await supabase
+  const { count: videosThisMonth, error: videosMonthError } = await supabase
     .from('videos')
     .select('*', { count: 'exact', head: true })
     .gte('timestamp', thirtyDaysAgo.toISOString())
 
-  if (newVideosError) {
-    throw new Error(`Failed to get new videos count: ${newVideosError.message}`)
+  if (videosMonthError) {
+    throw new Error(`Failed to get this month's videos count: ${videosMonthError.message}`)
   }
 
   return {
     totalUsers: totalUsers || 0,
+    activeUsers: activeUsers || 0,
     totalVideos: totalVideos || 0,
-    newUsersThisMonth: newUsers || 0,
-    newVideosThisMonth: newVideos || 0
+    videosToday: videosToday || 0,
+    videosThisWeek: videosThisWeek || 0,
+    videosThisMonth: videosThisMonth || 0
   }
 }
 
@@ -240,6 +268,30 @@ export async function saveVideo(video: Omit<VideoCreation, 'id'>): Promise<Video
   }
 }
 
+export async function addVideo(video: Omit<VideoCreation, 'id' | 'url'>): Promise<number> {
+  const { data, error } = await supabase
+    .from('videos')
+    .insert({
+      user_id: video.userId,
+      url: '', // Will be set to blob URL on client side
+      prompt: video.prompt,
+      animation_style: video.animationStyle,
+      timestamp: new Date(video.timestamp).toISOString(),
+      drive_file_id: video.driveFileId,
+      drive_view_link: video.driveViewLink,
+      drive_download_link: video.driveDownloadLink,
+      is_stored_in_drive: video.isStoredInDrive
+    })
+    .select('id')
+    .single()
+
+  if (error) {
+    throw new Error(`Failed to add video: ${error.message}`)
+  }
+
+  return data.id
+}
+
 export async function getAllVideos(): Promise<VideoCreation[]> {
   const { data, error } = await supabase
     .from('videos')
@@ -253,7 +305,7 @@ export async function getAllVideos(): Promise<VideoCreation[]> {
   return data.map(video => ({
     id: video.id,
     userId: video.user_id,
-    url: video.url,
+    url: video.url || '', // Provide default empty string
     prompt: video.prompt,
     animationStyle: video.animation_style,
     timestamp: video.timestamp,
@@ -278,7 +330,7 @@ export async function getVideosByUserId(userId: number): Promise<VideoCreation[]
   return data.map(video => ({
     id: video.id,
     userId: video.user_id,
-    url: video.url,
+    url: video.url || '', // Provide default empty string
     prompt: video.prompt,
     animationStyle: video.animation_style,
     timestamp: video.timestamp,
@@ -328,6 +380,26 @@ export async function saveAIModel(model: Omit<AIModelConfig, 'id' | 'createdAt'>
   }
 }
 
+export async function addAIModel(model: Omit<AIModelConfig, 'id'>): Promise<number> {
+  const { data, error } = await supabase
+    .from('ai_models')
+    .insert({
+      name: model.name,
+      model_id: model.modelId,
+      api_key: model.apiKey,
+      is_active: model.isActive,
+      created_at: new Date().toISOString()
+    })
+    .select('id')
+    .single()
+
+  if (error) {
+    throw new Error(`Failed to add AI model: ${error.message}`)
+  }
+
+  return data.id
+}
+
 export async function getAllAIModels(): Promise<AIModelConfig[]> {
   const { data, error } = await supabase
     .from('ai_models')
@@ -348,18 +420,16 @@ export async function getAllAIModels(): Promise<AIModelConfig[]> {
   }))
 }
 
-export async function updateAIModel(id: number, updates: Partial<Omit<AIModelConfig, 'id' | 'createdAt'>>): Promise<void> {
-  const updateData: any = {}
-  
-  if (updates.name !== undefined) updateData.name = updates.name
-  if (updates.modelId !== undefined) updateData.model_id = updates.modelId
-  if (updates.apiKey !== undefined) updateData.api_key = updates.apiKey
-  if (updates.isActive !== undefined) updateData.is_active = updates.isActive
-
+export async function updateAIModel(model: AIModelConfig): Promise<void> {
   const { error } = await supabase
     .from('ai_models')
-    .update(updateData)
-    .eq('id', id)
+    .update({
+      name: model.name,
+      model_id: model.modelId,
+      api_key: model.apiKey,
+      is_active: model.isActive
+    })
+    .eq('id', model.id)
 
   if (error) {
     throw new Error(`Failed to update AI model: ${error.message}`)

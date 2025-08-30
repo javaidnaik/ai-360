@@ -6,10 +6,11 @@
 export interface VideoCreation {
     id: number;
     prompt: string;
-    videoBlob: Blob;
+    videoBlob?: Blob; // Optional since not stored in DB
     timestamp: number;
     url: string; // Blob URL for easy display
     userId?: number; // Optional for backward compatibility
+    animationStyle?: string; // Animation style used
     driveFileId?: string; // Google Drive file ID
     driveViewLink?: string; // Google Drive view link
     driveDownloadLink?: string; // Google Drive download link
