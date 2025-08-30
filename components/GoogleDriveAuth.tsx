@@ -14,14 +14,27 @@ interface GoogleDriveAuthProps {
 const GoogleDriveAuth: React.FC<GoogleDriveAuthProps> = ({ onAuthSuccess, onAuthError }) => {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isCheckingToken, setIsCheckingToken] = useState(true);
 
   useEffect(() => {
     checkAuthStatus();
   }, []);
 
-  const checkAuthStatus = () => {
-    const authenticated = googleDriveService.isUserAuthenticated();
-    setIsAuthenticated(authenticated);
+  const checkAuthStatus = async () => {
+    setIsCheckingToken(true);
+    try {
+      // Check if user is already authenticated (token validation happens in setCurrentUser)
+      const authenticated = googleDriveService.isUserAuthenticated();
+      setIsAuthenticated(authenticated);
+      
+      if (authenticated) {
+        onAuthSuccess();
+      }
+    } catch (error) {
+      console.error('Error checking auth status:', error);
+    } finally {
+      setIsCheckingToken(false);
+    }
   };
 
   const handleAuthenticate = async () => {
@@ -64,6 +77,21 @@ const GoogleDriveAuth: React.FC<GoogleDriveAuthProps> = ({ onAuthSuccess, onAuth
       console.error('Sign out error:', error);
     }
   };
+
+  // Show loading while checking existing token
+  if (isCheckingToken) {
+    return (
+      <div className="bg-gray-500/10 border border-gray-500/20 rounded-lg p-4 mb-6">
+        <div className="flex items-center gap-3">
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-400"></div>
+          <div>
+            <p className="text-gray-400 font-medium">Checking Google Drive connection...</p>
+            <p className="text-gray-500 text-sm">Validating existing token</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isAuthenticated) {
     return (

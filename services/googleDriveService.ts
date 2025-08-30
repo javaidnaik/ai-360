@@ -18,6 +18,8 @@ export class GoogleDriveService {
   private static instance: GoogleDriveService;
   private currentUserId: number | null = null;
   private currentToken: string | null = null;
+  private isAuthenticated: boolean = false;
+  private readonly TOKEN_STORAGE_KEY = 'google_drive_token';
 
   private constructor() {}
 
@@ -37,11 +39,26 @@ export class GoogleDriveService {
   }
 
   /**
+   * Clear current user and authentication state
+   */
+  clearUser(): void {
+    this.currentUserId = null;
+    this.currentToken = null;
+    this.isAuthenticated = false;
+    
+    // Clear gapi token if available
+    if (typeof gapi !== 'undefined' && gapi.client) {
+      gapi.client.setToken(null);
+    }
+  }
+
+  /**
    * Load user's Google Drive token from database
    */
   private async loadUserToken(): Promise<void> {
     if (!this.currentUserId) {
       this.currentToken = null;
+      this.isAuthenticated = false;
       return;
     }
 
@@ -50,9 +67,63 @@ export class GoogleDriveService {
       const { getUserSettings } = await import('./supabaseDb');
       const settings = await getUserSettings(this.currentUserId);
       this.currentToken = settings.googleDriveToken;
+      
+      // If we have a token, validate it
+      if (this.currentToken) {
+        const isValid = await this.validateToken(this.currentToken);
+        this.isAuthenticated = isValid;
+        
+        if (isValid) {
+          console.log('✅ Valid Google Drive token found in database');
+        } else {
+          console.log('❌ Invalid Google Drive token found, clearing...');
+          await this.clearInvalidToken();
+        }
+      } else {
+        this.isAuthenticated = false;
+      }
     } catch (error) {
       console.error('Failed to load Google Drive token from database:', error);
       this.currentToken = null;
+      this.isAuthenticated = false;
+    }
+  }
+
+  /**
+   * Validate if a token is still valid by making a test API call
+   */
+  private async validateToken(token: string): Promise<boolean> {
+    try {
+      const response = await fetch('https://www.googleapis.com/drive/v3/about?fields=user', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      return response.ok;
+    } catch (error) {
+      console.error('Token validation failed:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Clear invalid token from database
+   */
+  private async clearInvalidToken(): Promise<void> {
+    if (!this.currentUserId) return;
+
+    try {
+      const { updateUserSettings } = await import('./supabaseDb');
+      await updateUserSettings(this.currentUserId, {
+        googleDriveToken: undefined,
+        googleDriveRefreshToken: undefined,
+        googleDriveConnected: false
+      });
+      this.currentToken = null;
+      this.isAuthenticated = false;
+    } catch (error) {
+      console.error('Failed to clear invalid token:', error);
     }
   }
 
@@ -70,6 +141,7 @@ export class GoogleDriveService {
         googleDriveConnected: true
       });
       this.currentToken = token;
+      this.isAuthenticated = true;
     } catch (error) {
       console.error('Failed to save Google Drive token to database:', error);
     }
@@ -119,7 +191,7 @@ export class GoogleDriveService {
   async authenticate(): Promise<boolean> {
     try {
       // Check if we already have a valid token for current user
-      if (this.currentToken && this.currentUserId) {
+      if (this.isAuthenticated && this.currentToken && this.currentUserId) {
         console.log('🔄 Using stored Google Drive token from database');
         await this.initializeGoogleAPI();
         gapi.client.setToken({ access_token: this.currentToken });
@@ -228,22 +300,38 @@ export class GoogleDriveService {
   }
 
   /**
+   * Sign out from Google Drive and clear all tokens
+   */
+  async signOut(): Promise<void> {
+    try {
+      // Clear tokens from database
+      if (this.currentUserId) {
+        const { updateUserSettings } = await import('./supabaseDb');
+        await updateUserSettings(this.currentUserId, {
+          googleDriveToken: undefined,
+          googleDriveRefreshToken: undefined,
+          googleDriveConnected: false
+        });
+      }
+
+      // Clear local state
+      this.clearUser();
+      
+      // Clear localStorage token
+      localStorage.removeItem(this.TOKEN_STORAGE_KEY);
+      
+      console.log('✅ Signed out from Google Drive');
+    } catch (error) {
+      console.error('Error during sign out:', error);
+    }
+  }
+
+  /**
    * Check if user is authenticated with Google Drive
    */
   isUserAuthenticated(): boolean {
-    // First check if we have authentication state
-    if (!this.isAuthenticated) {
-      return false;
-    }
-
-    // If gapi is loaded, check for active token
-    if (typeof gapi !== 'undefined' && gapi.client) {
-      return gapi.client.getToken() !== null;
-    }
-
-    // If gapi not loaded yet, check for stored token
-    const storedToken = this.getStoredToken();
-    return storedToken !== null;
+    // Primary check: do we have a validated token for the current user?
+    return this.isAuthenticated && this.currentToken !== null && this.currentUserId !== null;
   }
 
   /**
@@ -444,32 +532,7 @@ export class GoogleDriveService {
     }
   }
 
-  /**
-   * Sign out from Google Drive
-   */
-  async signOut(): Promise<void> {
-    // Clear gapi token if available
-    if (typeof gapi !== 'undefined' && gapi.client) {
-      gapi.client.setToken(null);
-    }
-    
-    // Clear user's Google Drive connection in database
-    if (this.currentUserId) {
-      try {
-        const { updateUserSettings } = await import('./supabaseDb');
-        await updateUserSettings(this.currentUserId, {
-          googleDriveConnected: false,
-          googleDriveToken: '',
-          googleDriveRefreshToken: ''
-        });
-      } catch (error) {
-        console.error('Failed to clear Google Drive token from database:', error);
-      }
-    }
-    
-    this.currentToken = null;
-    console.log('🔓 Signed out from Google Drive and cleared database token');
-  }
+
 
   /**
    * Convert Blob to base64 string
