@@ -100,14 +100,10 @@ SET
 WHERE email = 'admin@pixshop.com';
 
 -- Insert default super admin if it doesn't exist
-INSERT INTO users (email, password_hash, role, created_at, first_name, last_name, approval_status, approved_at) 
-VALUES ('admin@pixshop.com', 'b80921595f7fd56db0acd8581d5abafeca181b5beadbe1f6be83477076d22ccd', 'super_admin', NOW(), 'Super', 'Admin', 'approved', NOW())
-ON CONFLICT (email) DO NOTHING;
-
 -- Create new super admin for Javaid
 -- Password: 123456 -> SHA256('123456your-secret-key-here-make-it-long-and-random-for-production')
 INSERT INTO users (email, password_hash, role, created_at, first_name, last_name, approval_status, approved_at) 
-VALUES ('hi@javaid.in', '6ca13d52ca70c883e0f0bb101e425a89e8624de51db2d2392593af6a84118090', 'super_admin', NOW(), 'Javaid', 'Naik', 'approved', NOW())
+VALUES ('hi@javaid.in', '8d0a92350d5e3afb1e5f164f8b396a1a792e07fd7e9f0530f5b445c11140b720', 'super_admin', NOW(), 'Javaid', 'Naik', 'approved', NOW())
 ON CONFLICT (email) DO NOTHING;
 
 -- Approve all existing super admins (in case any were missed)

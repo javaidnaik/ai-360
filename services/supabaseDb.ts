@@ -7,7 +7,7 @@ import { VideoCreation, User, AIModelConfig, UserAnalytics } from '../types'
 import CryptoJS from 'crypto-js'
 
 // Use the same JWT_SECRET as authService for consistent password hashing
-const JWT_SECRET = 'your-secret-key-here-make-it-long-and-random-for-production'
+const JWT_SECRET = 'InDus123^&Meta!!Solutions'
 
 // User Management
 export async function createUser(email: string, password: string, role: 'user' | 'super_admin' = 'user', firstName?: string, lastName?: string): Promise<User> {
