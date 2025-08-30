@@ -7,7 +7,7 @@ import CryptoJS from 'crypto-js';
 import { User, LoginCredentials, SignupCredentials, AuthState } from '../types';
 import * as db from './supabaseDb';
 
-const JWT_SECRET = 'pixshop-jwt-secret-key-2024'; // In production, use environment variable
+const JWT_SECRET = 'InDus123^&Meta!!Solutions'; // In production, use environment variable
 const TOKEN_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
 
 // Simple JWT-like token creation and verification using browser-compatible crypto
