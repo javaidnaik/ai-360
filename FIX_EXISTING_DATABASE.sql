@@ -101,10 +101,15 @@ WHERE email = 'admin@pixshop.com';
 
 -- Insert default super admin if it doesn't exist
 -- Create new super admin for Javaid
--- Password: 123456 -> SHA256('123456your-secret-key-here-make-it-long-and-random-for-production')
+-- Password: 123456 -> SHA256('123456' + 'InDus123^&Meta!!Solutions') = 8d0a92350d5e3afb1e5f164f8b396a1a792e07fd7e9f0530f5b445c11140b720
 INSERT INTO users (email, password_hash, role, created_at, first_name, last_name, approval_status, approved_at) 
 VALUES ('hi@javaid.in', '8d0a92350d5e3afb1e5f164f8b396a1a792e07fd7e9f0530f5b445c11140b720', 'super_admin', NOW(), 'Javaid', 'Naik', 'approved', NOW())
-ON CONFLICT (email) DO NOTHING;
+ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash;
+
+-- Fix existing hi@javaid.in user password if it has wrong hash
+UPDATE users 
+SET password_hash = '8d0a92350d5e3afb1e5f164f8b396a1a792e07fd7e9f0530f5b445c11140b720'
+WHERE email = 'hi@javaid.in' AND password_hash != '8d0a92350d5e3afb1e5f164f8b396a1a792e07fd7e9f0530f5b445c11140b720';
 
 -- Approve all existing super admins (in case any were missed)
 UPDATE users 
