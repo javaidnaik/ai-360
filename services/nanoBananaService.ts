@@ -112,23 +112,29 @@ class NanoBananaService {
    * Prepare request data based on generation type (following official API format)
    */
   private async prepareRequest(options: ImageGenerationOptions): Promise<any> {
-    const parts: any[] = [{
-      text: this.buildPrompt(options)
-    }];
-
-    // Add image data for editing operations (following official format)
-    if (options.inputImage && options.type !== 'generate') {
-      const imageData = await this.fileToBase64(options.inputImage);
-      parts.push({
-        inlineData: {
-          mimeType: options.inputImage.type,
-          data: imageData
-        }
-      });
+    // For text-to-image generation (simple string as per docs)
+    if (!options.inputImage || options.type === 'generate') {
+      return {
+        contents: this.buildPrompt(options)
+      };
     }
 
+    // For image editing (array format as per docs)
+    const contents: any[] = [
+      { text: this.buildPrompt(options) }
+    ];
+
+    // Add image data for editing operations
+    const imageData = await this.fileToBase64(options.inputImage);
+    contents.push({
+      inlineData: {
+        mimeType: options.inputImage.type,
+        data: imageData
+      }
+    });
+
     return {
-      contents: [{ parts }]
+      contents
     };
   }
 
